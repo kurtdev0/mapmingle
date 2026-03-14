@@ -56,10 +56,10 @@ export const dbServices = {
       return data;
   },
 
-  async updateProfile(updates: { name: string, username: string, bio: string, avatarFile?: File, expertise?: string[] }) {
+  async updateProfile(updates: { name: string; username: string; bio: string; avatarFile?: File; expertise?: string[] }) {
       const session = await this.getSession();
       const userId = session?.user?.id;
-      if (!userId) throw new Error("Must be logged in to update profile");
+      if (!userId) throw new Error("Not authenticated");
       
       let avatarUrl = undefined;
       
@@ -83,7 +83,7 @@ export const dbServices = {
           bio: updates.bio
       };
       if (avatarUrl) payload.avatar_url = avatarUrl;
-      if (updates.expertise) payload.expertise = updates.expertise;
+      if (updates.expertise !== undefined) payload.expertise = updates.expertise;
       
       const { data, error } = await supabase
           .from('profiles')
@@ -95,23 +95,6 @@ export const dbServices = {
       if (error) throw error;
       return data;
   },
-  
-  async upgradeToGuide(expertise: string[]) {
-      const session = await this.getSession();
-      const userId = session?.user?.id;
-      if (!userId) throw new Error("Must be logged in to upgrade");
-      
-      const { data, error } = await supabase
-          .from('profiles')
-          .update({ is_guide: true, expertise })
-          .eq('id', userId)
-          .select()
-          .single();
-          
-      if (error) throw error;
-      return data;
-  },
-
       // --- PROFILES & GUIDES ---
   async getGuides() {
     const session = await this.getSession();
@@ -119,7 +102,7 @@ export const dbServices = {
 
     const { data, error } = await supabase
       .from('profiles')
-      .select('*')
+      .select('id, name, username, avatar_url, bio, is_guide, expertise, created_at, location, languages')
       .eq('is_guide', true);
       
     if (error) throw error;
@@ -148,6 +131,25 @@ export const dbServices = {
         location: guide.location,
         languages: guide.languages || []
     })) as GuideProfile[];
+  },
+
+  async upgradeToGuide(expertise: string[]) {
+      const session = await this.getSession();
+      const userId = session?.user?.id;
+      if (!userId) throw new Error("Must be logged in to become a guide.");
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({ 
+            is_guide: true,
+            expertise: expertise
+        })
+        .eq('id', userId)
+        .select()
+        .single();
+        
+      if (error) throw error;
+      return data;
   },
 
   async toggleFollow(guideId: string, currentlyFollowing: boolean) {
@@ -474,7 +476,6 @@ export const dbServices = {
             sender_id: userId,
             recipient_id: recipientId,
             content: content,
-            is_read: false
         })
         .select()
         .single();
@@ -507,16 +508,16 @@ export const dbServices = {
   async getAppointments() {
        const session = await this.getSession();
        const userId = session?.user?.id;
-       if (!userId) return [];
+       if (!userId) throw new Error("Must be logged in to view appointments");
 
        const { data, error } = await supabase
-         .from('appointments')
-         .select(`
+          .from('appointments')
+          .select(`
              *,
-             guide:profiles!guide_id(name, avatar_url)
-         `)
-         .eq('user_id', userId)
-         .order('appointment_date', { ascending: true });
+             guide:profiles!appointments_guide_id_fkey(name, avatar_url)
+          `)
+          .eq('user_id', userId)
+          .order('appointment_date', { ascending: true });
 
        if (error) throw error;
        return data;
@@ -525,29 +526,29 @@ export const dbServices = {
   async getReceivedAppointments() {
        const session = await this.getSession();
        const userId = session?.user?.id;
-       if (!userId) return [];
+       if (!userId) throw new Error("Must be logged in to view appointments");
 
        const { data, error } = await supabase
-         .from('appointments')
-         .select(`
+          .from('appointments')
+          .select(`
              *,
-             user:profiles!user_id(name, avatar_url)
-         `)
-         .eq('guide_id', userId)
-         .order('appointment_date', { ascending: true });
+             user:profiles!appointments_user_id_fkey(name, avatar_url, username)
+          `)
+          .eq('guide_id', userId)
+          .order('appointment_date', { ascending: false });
 
        if (error) throw error;
        return data;
   },
 
-  async updateAppointmentStatus(appointmentId: string, status: 'pending' | 'confirmed' | 'cancelled' | 'completed') {
+  async updateAppointmentStatus(appointmentId: string, status: 'confirmed' | 'cancelled' | 'completed') {
        const { data, error } = await supabase
-         .from('appointments')
-         .update({ status })
-         .eq('id', appointmentId)
-         .select()
-         .single();
-
+          .from('appointments')
+          .update({ status })
+          .eq('id', appointmentId)
+          .select()
+          .single();
+          
        if (error) throw error;
        return data;
   }

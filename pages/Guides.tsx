@@ -14,24 +14,41 @@ const Guides: React.FC = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [selectedGuide, setSelectedGuide] = useState<GuideProfile | null>(null);
 
-  // Upgrade Modal State
-  const [upgradeCity, setUpgradeCity] = useState('');
-  const [upgradeLoading, setUpgradeLoading] = useState(false);
+  const [applyExpertise, setApplyExpertise] = useState('');
+  const [isApplying, setIsApplying] = useState(false);
+
+  const loadGuides = async () => {
+      try {
+          setLoading(true);
+          const data = await dbServices.getGuides();
+          setGuides(data);
+      } catch (error) {
+          console.error("Failed to load guides:", error);
+      } finally {
+          setLoading(false);
+      }
+  };
 
   useEffect(() => {
-     const loadGuides = async () => {
-         try {
-             setLoading(true);
-             const data = await dbServices.getGuides();
-             setGuides(data);
-         } catch (error) {
-             console.error("Failed to load guides:", error);
-         } finally {
-             setLoading(false);
-         }
-     };
      loadGuides();
   }, []);
+
+  const handleBecomeGuideSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setIsApplying(true);
+      try {
+          const expertiseList = applyExpertise.split(',').map(s => s.trim()).filter(Boolean);
+          await dbServices.upgradeToGuide(expertiseList);
+          alert("Congratulations! You are now a verified Guide. You can receive booking requests from travelers. You can now edit your expertise regions from your Profile Edit menu.");
+          setIsBecomeGuideOpen(false);
+          loadGuides();
+      } catch (err: any) {
+          console.error(err);
+          alert(err.message || "Failed to apply for guide status");
+      } finally {
+          setIsApplying(false);
+      }
+  };
 
   const toggleFollow = async (id: string, e: React.MouseEvent, currentlyFollowing: boolean) => {
     e.preventDefault();
@@ -62,25 +79,6 @@ const Guides: React.FC = () => {
     : guides.filter(g => g.expertise.includes(filterExpertise));
 
   const uniqueExpertise = ['All', ...Array.from(new Set(guides.flatMap(g => g.expertise)))];
-
-  const handleBecomeGuideSubmit = async (e: React.FormEvent) => {
-      e.preventDefault();
-      setUpgradeLoading(true);
-      try {
-          const expertiseArray = upgradeCity.split(',').map(s => s.trim()).filter(Boolean);
-          await dbServices.upgradeToGuide(expertiseArray);
-          alert("Success! You are now a Verified Guide. Your badge is active.");
-          setIsBecomeGuideOpen(false);
-          // Refresh list to potentially show user if they meet guide query
-          const data = await dbServices.getGuides();
-          setGuides(data);
-      } catch (err: any) {
-          console.error("Failed to upgrade:", err);
-          alert(err.message || "Failed to upgrade to guide.");
-      } finally {
-          setUpgradeLoading(false);
-      }
-  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -188,26 +186,22 @@ const Guides: React.FC = () => {
                 <input type="text" className="w-full border-gray-300 rounded-lg p-2 border focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="Your Name" required />
             </div>
             <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Cities of Expertise (Comma separated)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">City of Expertise</label>
                 <input 
                     type="text" 
-                    value={upgradeCity}
-                    onChange={e => setUpgradeCity(e.target.value)}
+                    value={applyExpertise}
+                    onChange={(e) => setApplyExpertise(e.target.value)}
                     className="w-full border-gray-300 rounded-lg p-2 border focus:ring-2 focus:ring-indigo-500 focus:border-transparent" 
-                    placeholder="e.g. Paris, Lyon" 
+                    placeholder="e.g. Paris, Lyon (comma separated)" 
                     required 
-                 />
+                />
             </div>
             <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Why should we verify you?</label>
                 <textarea className="w-full border-gray-300 rounded-lg p-2 border focus:ring-2 focus:ring-indigo-500 focus:border-transparent" rows={3} placeholder="Tell us about your local knowledge..." required></textarea>
             </div>
-            <button 
-                type="submit" 
-                disabled={upgradeLoading}
-                className="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl hover:bg-indigo-700 shadow-md transition-colors disabled:opacity-50"
-            >
-                {upgradeLoading ? 'Upgrading Account...' : 'Submit Application'}
+            <button type="submit" disabled={isApplying} className="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl hover:bg-indigo-700 shadow-md disabled:opacity-50">
+                {isApplying ? 'Submitting...' : 'Submit Application'}
             </button>
         </form>
       </Modal>

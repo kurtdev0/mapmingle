@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FeedPost } from '../types';
-import { Heart, MessageCircle, Share2, MapPin, MoreHorizontal, Upload, X, Camera, Trash2, UserMinus, CheckCircle2 } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MapPin, MoreHorizontal, Upload, X, Camera, Trash2, UserMinus, BadgeCheck } from 'lucide-react';
 import { dbServices } from '../services/dbServices';
 
 import Modal from '../components/Modal';
@@ -215,9 +215,9 @@ const Feed: React.FC = () => {
               <Link to={`/profile/${post.author.id}`} className="flex items-center gap-3 group">
                 <img src={post.author.avatarUrl || 'https://via.placeholder.com/150'} alt={post.author.name} className="w-12 h-12 rounded-full object-cover shadow-sm group-hover:ring-2 ring-indigo-500 ring-offset-2 transition-all" />
                 <div>
-                  <h3 className="font-bold text-[15px] text-gray-900 flex items-center gap-1.5 group-hover:text-indigo-600 transition-colors">
+                  <h3 className="font-bold text-[15px] text-gray-900 flex items-center gap-1 group-hover:text-indigo-600 transition-colors">
                     {post.author.name}
-                    {post.author.isGuide && <CheckCircle2 size={16} className="text-blue-500 fill-current" />}
+                    {post.author.isGuide && <BadgeCheck size={16} className="text-blue-500 fill-blue-50" aria-label="Verified Guide" />}
                   </h3>
                   <p className="text-xs text-gray-500 flex items-center gap-1 font-medium mt-0.5">
                     <MapPin size={12} className="text-indigo-500" /> {post.location}

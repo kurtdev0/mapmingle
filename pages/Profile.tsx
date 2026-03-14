@@ -11,9 +11,9 @@ const Profile: React.FC = () => {
   const [isCurrentUser, setIsCurrentUser] = useState(false);
   const [savedPlaces, setSavedPlaces] = useState<any[]>([]);
   const [userPosts, setUserPosts] = useState<any[]>([]);
+  const [bookingRequests, setBookingRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'saved' | 'posts' | 'requests'>('saved');
-  const [receivedAppointments, setReceivedAppointments] = useState<any[]>([]);
 
   // Edit Profile State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -51,7 +51,7 @@ const Profile: React.FC = () => {
               setEditName(targetProfile.name || '');
               setEditUsername(targetProfile.username || '');
               setEditBio(targetProfile.bio || '');
-              setEditExpertise(targetProfile.expertise?.join(', ') || '');
+              setEditExpertise(targetProfile.expertise ? targetProfile.expertise.join(', ') : '');
           }
 
           // Fetch their posts
@@ -60,10 +60,10 @@ const Profile: React.FC = () => {
               setUserPosts(posts);
           }
 
-          // Fetch Guide bookings if applicable
-          if (isMe && targetProfile && targetProfile.is_guide) {
-              const apps = await dbServices.getReceivedAppointments();
-              setReceivedAppointments(apps);
+          // Fetch guide booking requests
+          if (isMe && targetProfile?.is_guide) {
+              const requests = await dbServices.getReceivedAppointments();
+              setBookingRequests(requests);
           }
 
           // Fetch their saved places
@@ -85,13 +85,18 @@ const Profile: React.FC = () => {
       e.preventDefault();
       setIsSaving(true);
       try {
-          const updatedProfile = await dbServices.updateProfile({
+          const payload: any = {
               name: editName,
               username: editUsername,
               bio: editBio,
-              expertise: editExpertise.split(',').map(e => e.trim()).filter(Boolean),
               avatarFile: editAvatarFile || undefined
-          });
+          };
+          
+          if (profile.is_guide) {
+              payload.expertise = editExpertise.split(',').map(s => s.trim()).filter(Boolean);
+          }
+          
+          const updatedProfile = await dbServices.updateProfile(payload);
           
           setProfile(updatedProfile);
           setIsEditModalOpen(false);
@@ -110,16 +115,6 @@ const Profile: React.FC = () => {
           const reader = new FileReader();
           reader.onloadend = () => setEditAvatarPreview(reader.result as string);
           reader.readAsDataURL(file);
-      }
-  };
-
-  const handleUpdateAppointment = async (id: string, status: 'confirmed' | 'cancelled') => {
-      try {
-          await dbServices.updateAppointmentStatus(id, status);
-          setReceivedAppointments(prev => prev.map(a => a.id === id ? { ...a, status } : a));
-      } catch (err) {
-          console.error("Failed to update status", err);
-          alert("Failed to update appointment status.");
       }
   };
 
@@ -182,11 +177,11 @@ const Profile: React.FC = () => {
                       <p className="text-gray-700 mb-6 max-w-2xl leading-relaxed">{profile.bio}</p>
                   )}
 
-                  {profile.expertise && profile.expertise.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mb-6">
-                          {profile.expertise.map((exp: string, idx: number) => (
-                              <span key={idx} className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border border-indigo-100">
-                                  {exp}
+                  {profile.is_guide && profile.expertise && profile.expertise.length > 0 && (
+                      <div className="mb-6 flex flex-wrap gap-2">
+                          {profile.expertise.map((area: string, i: number) => (
+                              <span key={i} className="bg-indigo-50 text-indigo-700 border border-indigo-100 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+                                  <MapPin size={10} /> {area}
                               </span>
                           ))}
                       </div>
@@ -277,6 +272,7 @@ const Profile: React.FC = () => {
           </div>
       )}
 
+
       {activeTab === 'posts' && (
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 md:gap-6">
               {userPosts.length > 0 ? (
@@ -302,42 +298,42 @@ const Profile: React.FC = () => {
       )}
 
       {activeTab === 'requests' && profile.is_guide && isCurrentUser && (
-          <div className="space-y-4">
-              {receivedAppointments.length > 0 ? (
-                  receivedAppointments.map(app => (
-                      <div key={app.id} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-6 justify-between items-start md:items-center">
+          <div className="space-y-4 max-w-3xl mx-auto">
+              {bookingRequests.length > 0 ? (
+                  bookingRequests.map(req => (
+                      <div key={req.id} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex items-center justify-between">
                           <div className="flex items-center gap-4">
-                              <img src={app.user?.avatar_url || 'https://via.placeholder.com/150'} alt={app.user?.name} className="w-12 h-12 rounded-full object-cover" />
+                              <img src={req.user?.avatar_url || 'https://via.placeholder.com/150'} className="w-12 h-12 rounded-full object-cover bg-gray-100" />
                               <div>
-                                  <h4 className="font-bold text-gray-900">{app.user?.name} wants a tour!</h4>
-                                  <p className="text-sm text-gray-500 mt-1">
-                                      Date: <span className="font-medium text-gray-900">{app.appointment_date}</span>
+                                  <h4 className="font-bold text-gray-900">{req.user?.name} <span className="text-gray-500 text-sm font-normal">@{req.user?.username}</span></h4>
+                                  <p className="text-sm text-gray-600 flex items-center gap-2 mt-1">
+                                      <span className="font-medium bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md">{new Date(req.appointment_date).toLocaleDateString()}</span>
+                                      • Status: <span className="capitalize font-bold">{req.status}</span>
                                   </p>
-                                  {app.notes && <p className="text-sm text-gray-600 mt-2 bg-gray-50 p-3 rounded-xl italic">"{app.notes}"</p>}
+                                  {req.notes && <p className="text-sm text-gray-500 mt-2 italic bg-gray-50 p-2 rounded-lg">"{req.notes}"</p>}
                               </div>
                           </div>
-                          
-                          <div className="flex items-center gap-3 w-full md:w-auto mt-4 md:mt-0">
-                              {app.status === 'pending' ? (
-                                  <>
-                                      <button onClick={() => handleUpdateAppointment(app.id, 'confirmed')} className="flex-1 md:flex-none bg-indigo-600 text-white font-bold px-6 py-2.5 rounded-xl hover:bg-indigo-700 transition-colors shadow-sm">Accept</button>
-                                      <button onClick={() => handleUpdateAppointment(app.id, 'cancelled')} className="flex-1 md:flex-none bg-gray-100 text-gray-700 font-bold px-6 py-2.5 rounded-xl hover:bg-gray-200 transition-colors">Decline</button>
-                                  </>
-                              ) : (
-                                  <span className={`px-4 py-2 font-bold text-sm rounded-xl uppercase tracking-wider ${app.status === 'confirmed' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-gray-50 text-gray-500 border border-gray-200'}`}>
-                                      {app.status}
-                                  </span>
-                              )}
-                          </div>
+                          {req.status === 'pending' && (
+                              <div className="flex gap-2">
+                                  <button onClick={async () => {
+                                      await dbServices.updateAppointmentStatus(req.id, 'confirmed');
+                                      setBookingRequests(await dbServices.getReceivedAppointments());
+                                  }} className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-indigo-700 transition">Accept</button>
+                                  <button onClick={async () => {
+                                      await dbServices.updateAppointmentStatus(req.id, 'cancelled');
+                                      setBookingRequests(await dbServices.getReceivedAppointments());
+                                  }} className="bg-gray-100 text-gray-700 px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-200 transition">Decline</button>
+                              </div>
+                          )}
                       </div>
                   ))
               ) : (
                   <div className="text-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm">
-                      <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <Users size={24} className="text-gray-400" />
+                      <div className="bg-indigo-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-indigo-400">
+                          <Users size={24} />
                       </div>
-                      <h3 className="text-lg font-bold text-gray-900 mb-1">No Requests Yet</h3>
-                      <p className="text-gray-500">When users book a tour with you, it will appear here.</p>
+                      <h3 className="text-lg font-bold text-gray-900 mb-1">No Booking Requests</h3>
+                      <p className="text-gray-500">When travelers request tours with you, they'll appear here.</p>
                   </div>
               )}
           </div>
@@ -393,15 +389,15 @@ const Profile: React.FC = () => {
                   ></textarea>
               </div>
 
-              {profile.is_guide && (
+              {profile?.is_guide && (
                   <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-1">Expertise Regions (Comma separated)</label>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Expertise Regions</label>
                       <input 
                           type="text" 
                           value={editExpertise}
                           onChange={(e) => setEditExpertise(e.target.value)}
-                          placeholder="e.g. Kyoto, Osaka, Mount Fuji"
-                          className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                          placeholder="e.g. Rome, Colosseum, Vatican (comma separated)"
+                          className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
                       />
                   </div>
               )}

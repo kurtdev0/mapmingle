@@ -14,6 +14,18 @@ export interface Place {
   tags?: string[];
 }
 
+export interface UserProfile {
+  id: string;
+  email: string;
+  username: string;
+  name: string;
+  avatar_url?: string;
+  bio?: string;
+  is_guide: boolean;
+  expertise?: string[];
+  created_at: string;
+}
+
 export interface GuideProfile {
   id: string;
   name: string;
