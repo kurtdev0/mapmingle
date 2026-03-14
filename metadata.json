@@ -1,0 +1,7 @@
+{
+  "name": "MapMingle",
+  "description": "A social travel platform combining local guide expertise, hidden gem discovery, and essential utility finding like clean water and toilets.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
