@@ -12,13 +12,15 @@ const Profile: React.FC = () => {
   const [savedPlaces, setSavedPlaces] = useState<any[]>([]);
   const [userPosts, setUserPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'saved' | 'posts'>('saved');
+  const [activeTab, setActiveTab] = useState<'saved' | 'posts' | 'requests'>('saved');
+  const [receivedAppointments, setReceivedAppointments] = useState<any[]>([]);
 
   // Edit Profile State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editName, setEditName] = useState('');
   const [editUsername, setEditUsername] = useState('');
   const [editBio, setEditBio] = useState('');
+  const [editExpertise, setEditExpertise] = useState('');
   const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
   const [editAvatarPreview, setEditAvatarPreview] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -49,12 +51,19 @@ const Profile: React.FC = () => {
               setEditName(targetProfile.name || '');
               setEditUsername(targetProfile.username || '');
               setEditBio(targetProfile.bio || '');
+              setEditExpertise(targetProfile.expertise?.join(', ') || '');
           }
 
           // Fetch their posts
           if (targetProfile) {
               const posts = await dbServices.getUserPosts(targetProfile.id);
               setUserPosts(posts);
+          }
+
+          // Fetch Guide bookings if applicable
+          if (isMe && targetProfile && targetProfile.is_guide) {
+              const apps = await dbServices.getReceivedAppointments();
+              setReceivedAppointments(apps);
           }
 
           // Fetch their saved places
@@ -80,6 +89,7 @@ const Profile: React.FC = () => {
               name: editName,
               username: editUsername,
               bio: editBio,
+              expertise: editExpertise.split(',').map(e => e.trim()).filter(Boolean),
               avatarFile: editAvatarFile || undefined
           });
           
@@ -100,6 +110,16 @@ const Profile: React.FC = () => {
           const reader = new FileReader();
           reader.onloadend = () => setEditAvatarPreview(reader.result as string);
           reader.readAsDataURL(file);
+      }
+  };
+
+  const handleUpdateAppointment = async (id: string, status: 'confirmed' | 'cancelled') => {
+      try {
+          await dbServices.updateAppointmentStatus(id, status);
+          setReceivedAppointments(prev => prev.map(a => a.id === id ? { ...a, status } : a));
+      } catch (err) {
+          console.error("Failed to update status", err);
+          alert("Failed to update appointment status.");
       }
   };
 
@@ -162,6 +182,16 @@ const Profile: React.FC = () => {
                       <p className="text-gray-700 mb-6 max-w-2xl leading-relaxed">{profile.bio}</p>
                   )}
 
+                  {profile.expertise && profile.expertise.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-6">
+                          {profile.expertise.map((exp: string, idx: number) => (
+                              <span key={idx} className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border border-indigo-100">
+                                  {exp}
+                              </span>
+                          ))}
+                      </div>
+                  )}
+
                   <div className="flex flex-wrap gap-8 text-sm">
                       <div className="flex flex-col">
                           <span className="font-bold text-xl text-gray-900">{userPosts.length}</span>
@@ -204,6 +234,17 @@ const Profile: React.FC = () => {
               <Grid size={18} className={activeTab === 'posts' ? 'fill-current' : ''} /> 
               My Posts
           </button>
+          {profile.is_guide && isCurrentUser && (
+            <button 
+                onClick={() => setActiveTab('requests')}
+                className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-4 font-bold text-sm transition-colors border-b-2 ${
+                    activeTab === 'requests' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-800'
+                }`}
+            >
+                <Users size={18} className={activeTab === 'requests' ? 'fill-current' : ''} /> 
+                Requests
+            </button>
+          )}
       </div>
 
       {/* Tab Content */}
@@ -260,6 +301,48 @@ const Profile: React.FC = () => {
           </div>
       )}
 
+      {activeTab === 'requests' && profile.is_guide && isCurrentUser && (
+          <div className="space-y-4">
+              {receivedAppointments.length > 0 ? (
+                  receivedAppointments.map(app => (
+                      <div key={app.id} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-6 justify-between items-start md:items-center">
+                          <div className="flex items-center gap-4">
+                              <img src={app.user?.avatar_url || 'https://via.placeholder.com/150'} alt={app.user?.name} className="w-12 h-12 rounded-full object-cover" />
+                              <div>
+                                  <h4 className="font-bold text-gray-900">{app.user?.name} wants a tour!</h4>
+                                  <p className="text-sm text-gray-500 mt-1">
+                                      Date: <span className="font-medium text-gray-900">{app.appointment_date}</span>
+                                  </p>
+                                  {app.notes && <p className="text-sm text-gray-600 mt-2 bg-gray-50 p-3 rounded-xl italic">"{app.notes}"</p>}
+                              </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-3 w-full md:w-auto mt-4 md:mt-0">
+                              {app.status === 'pending' ? (
+                                  <>
+                                      <button onClick={() => handleUpdateAppointment(app.id, 'confirmed')} className="flex-1 md:flex-none bg-indigo-600 text-white font-bold px-6 py-2.5 rounded-xl hover:bg-indigo-700 transition-colors shadow-sm">Accept</button>
+                                      <button onClick={() => handleUpdateAppointment(app.id, 'cancelled')} className="flex-1 md:flex-none bg-gray-100 text-gray-700 font-bold px-6 py-2.5 rounded-xl hover:bg-gray-200 transition-colors">Decline</button>
+                                  </>
+                              ) : (
+                                  <span className={`px-4 py-2 font-bold text-sm rounded-xl uppercase tracking-wider ${app.status === 'confirmed' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-gray-50 text-gray-500 border border-gray-200'}`}>
+                                      {app.status}
+                                  </span>
+                              )}
+                          </div>
+                      </div>
+                  ))
+              ) : (
+                  <div className="text-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm">
+                      <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Users size={24} className="text-gray-400" />
+                      </div>
+                      <h3 className="text-lg font-bold text-gray-900 mb-1">No Requests Yet</h3>
+                      <p className="text-gray-500">When users book a tour with you, it will appear here.</p>
+                  </div>
+              )}
+          </div>
+      )}
+
       {/* Edit Profile Modal */}
       <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit Profile">
           <form onSubmit={handleEditSubmit} className="flex flex-col gap-4">
@@ -309,6 +392,19 @@ const Profile: React.FC = () => {
                       rows={3}
                   ></textarea>
               </div>
+
+              {profile.is_guide && (
+                  <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Expertise Regions (Comma separated)</label>
+                      <input 
+                          type="text" 
+                          value={editExpertise}
+                          onChange={(e) => setEditExpertise(e.target.value)}
+                          placeholder="e.g. Kyoto, Osaka, Mount Fuji"
+                          className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                      />
+                  </div>
+              )}
 
               <button 
                   type="submit" 

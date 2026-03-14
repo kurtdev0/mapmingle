@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FeedPost } from '../types';
-import { Heart, MessageCircle, Share2, MapPin, MoreHorizontal, Upload, X, Camera, Trash2, UserMinus } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MapPin, MoreHorizontal, Upload, X, Camera, Trash2, UserMinus, CheckCircle2 } from 'lucide-react';
 import { dbServices } from '../services/dbServices';
 
 import Modal from '../components/Modal';
@@ -217,7 +217,7 @@ const Feed: React.FC = () => {
                 <div>
                   <h3 className="font-bold text-[15px] text-gray-900 flex items-center gap-1.5 group-hover:text-indigo-600 transition-colors">
                     {post.author.name}
-                    {post.author.isGuide && <span className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold shadow-sm">Guide</span>}
+                    {post.author.isGuide && <CheckCircle2 size={16} className="text-blue-500 fill-current" />}
                   </h3>
                   <p className="text-xs text-gray-500 flex items-center gap-1 font-medium mt-0.5">
                     <MapPin size={12} className="text-indigo-500" /> {post.location}

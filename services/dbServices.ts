@@ -56,7 +56,7 @@ export const dbServices = {
       return data;
   },
 
-  async updateProfile(updates: { name: string, username: string, bio: string, avatarFile?: File }) {
+  async updateProfile(updates: { name: string, username: string, bio: string, avatarFile?: File, expertise?: string[] }) {
       const session = await this.getSession();
       const userId = session?.user?.id;
       if (!userId) throw new Error("Must be logged in to update profile");
@@ -83,6 +83,7 @@ export const dbServices = {
           bio: updates.bio
       };
       if (avatarUrl) payload.avatar_url = avatarUrl;
+      if (updates.expertise) payload.expertise = updates.expertise;
       
       const { data, error } = await supabase
           .from('profiles')
@@ -94,6 +95,23 @@ export const dbServices = {
       if (error) throw error;
       return data;
   },
+  
+  async upgradeToGuide(expertise: string[]) {
+      const session = await this.getSession();
+      const userId = session?.user?.id;
+      if (!userId) throw new Error("Must be logged in to upgrade");
+      
+      const { data, error } = await supabase
+          .from('profiles')
+          .update({ is_guide: true, expertise })
+          .eq('id', userId)
+          .select()
+          .single();
+          
+      if (error) throw error;
+      return data;
+  },
+
       // --- PROFILES & GUIDES ---
   async getGuides() {
     const session = await this.getSession();
@@ -499,6 +517,36 @@ export const dbServices = {
          `)
          .eq('user_id', userId)
          .order('appointment_date', { ascending: true });
+
+       if (error) throw error;
+       return data;
+  },
+
+  async getReceivedAppointments() {
+       const session = await this.getSession();
+       const userId = session?.user?.id;
+       if (!userId) return [];
+
+       const { data, error } = await supabase
+         .from('appointments')
+         .select(`
+             *,
+             user:profiles!user_id(name, avatar_url)
+         `)
+         .eq('guide_id', userId)
+         .order('appointment_date', { ascending: true });
+
+       if (error) throw error;
+       return data;
+  },
+
+  async updateAppointmentStatus(appointmentId: string, status: 'pending' | 'confirmed' | 'cancelled' | 'completed') {
+       const { data, error } = await supabase
+         .from('appointments')
+         .update({ status })
+         .eq('id', appointmentId)
+         .select()
+         .single();
 
        if (error) throw error;
        return data;
