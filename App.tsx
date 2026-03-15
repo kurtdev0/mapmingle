@@ -9,6 +9,7 @@ import Essentials from './pages/Essentials';
 import Planner from './pages/Planner';
 import Exaggeration from './pages/Exaggeration';
 import Profile from './pages/Profile'; // Added import
+import DiscoverMap from './pages/DiscoverMap'; // Added import
 
 import Modal from './components/Modal';
 
@@ -23,6 +24,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/feed" element={<Feed />} />
+            <Route path="/discover" element={<DiscoverMap />} />
             <Route path="/guides" element={<Guides />} />
             <Route path="/guides/:id" element={<GuideDetails />} />
             <Route path="/profile" element={<Profile />} />

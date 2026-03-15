@@ -15,7 +15,10 @@ const GuideDetails: React.FC = () => {
 
   const [bookingDate, setBookingDate] = useState('');
   const [bookingNotes, setBookingNotes] = useState('');
+  const [selectedPackageId, setSelectedPackageId] = useState<string>('');
   const [isBooking, setIsBooking] = useState(false);
+  const [tourPackages, setTourPackages] = useState<any[]>([]);
+  const [guidePosts, setGuidePosts] = useState<any[]>([]);
 
   useEffect(() => {
      const loadGuide = async () => {
@@ -27,6 +30,16 @@ const GuideDetails: React.FC = () => {
              const guides = await dbServices.getGuides();
              const found = guides.find(g => g.id === id) || null;
              setGuide(found);
+             
+             if (found) {
+                 const pkgs = await dbServices.getTourPackages(found.id).catch(() => []);
+                 setTourPackages(pkgs);
+
+                 // Fetch this guide's actual posts
+                 const allPosts = await dbServices.getFeedPosts();
+                 const myPosts = allPosts.filter(p => p.author.id === found.id);
+                 setGuidePosts(myPosts);
+             }
          } catch (err) {
              console.error("Failed to load guide details:", err);
          } finally {
@@ -61,14 +74,19 @@ const GuideDetails: React.FC = () => {
       
       setIsBooking(true);
       try {
-          await dbServices.bookAppointment(guide.id, bookingDate, bookingNotes);
+          if (selectedPackageId) {
+              await dbServices.bookTourPackage(selectedPackageId, guide.id, bookingDate, bookingNotes);
+          } else {
+              await dbServices.bookAppointment(guide.id, bookingDate, bookingNotes);
+          }
           setActiveModal(null);
           setBookingDate('');
           setBookingNotes('');
+          setSelectedPackageId('');
           alert(`Booking request sent! ${guide.name} will contact you shortly.`);
       } catch (err) {
-          console.error("Failed to book appointment", err);
-          alert("Failed to book appointment. Are you logged in?");
+          console.error("Failed to book", err);
+          alert("Failed to book. Are you logged in?");
       } finally {
           setIsBooking(false);
       }
@@ -126,6 +144,11 @@ const GuideDetails: React.FC = () => {
                 <div className="flex items-center gap-3 mb-1">
                     <h1 className="text-3xl font-serif font-bold text-gray-900">{guide.name}</h1>
                     <Shield className="text-indigo-600 fill-indigo-50" size={24} />
+                    {guide.isVerified && (
+                        <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 border border-blue-100 shadow-sm ml-2">
+                            <Shield size={14} className="fill-current" /> Verified Guide
+                        </span>
+                    )}
                 </div>
                 <p className="text-gray-500 font-medium mb-4 flex items-center gap-2">
                     <span className="text-indigo-600 font-bold">{guide.username}</span> 
@@ -166,6 +189,38 @@ const GuideDetails: React.FC = () => {
                         ))}
                     </div>
                 </div>
+
+                {tourPackages.length > 0 && (
+                    <div className="mt-8 border-t border-gray-100 pt-6">
+                        <h3 className="font-bold text-gray-900 mb-4">Available Tour Packages</h3>
+                        <div className="space-y-4">
+                            {tourPackages.map(pkg => (
+                                <div key={pkg.id} className="bg-gray-50 rounded-2xl p-5 border border-gray-100 flex flex-col md:flex-row justify-between gap-4">
+                                    <div>
+                                        <h4 className="font-bold text-gray-900 text-lg mb-1">{pkg.title}</h4>
+                                        <p className="text-gray-600 mb-3 text-sm leading-relaxed">{pkg.description}</p>
+                                        <div className="flex gap-3 text-xs font-bold text-gray-500">
+                                            <span className="bg-white px-3 py-1 rounded-full border border-gray-200 shadow-sm">{pkg.duration_hours} Hrs</span>
+                                            <span className="bg-white px-3 py-1 rounded-full border border-gray-200 shadow-sm">Max {pkg.max_people} Ppl</span>
+                                        </div>
+                                    </div>
+                                    <div className="md:text-right flex flex-col justify-between shrink-0 mt-4 md:mt-0 items-start md:items-end">
+                                        <span className="text-2xl font-black text-indigo-600 mb-2">${pkg.price}</span>
+                                        <button 
+                                            onClick={() => {
+                                                setSelectedPackageId(pkg.id);
+                                                setActiveModal('book');
+                                            }}
+                                            className="bg-gray-900 text-white px-5 py-2 text-sm font-bold rounded-xl hover:bg-gray-800 transition-colors shadow-lg shadow-gray-200 w-full md:w-auto"
+                                        >
+                                            Select Package
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
       </div>
@@ -175,17 +230,23 @@ const GuideDetails: React.FC = () => {
            <h2 className="text-lg font-bold text-gray-900">Guide's Hidden Gems</h2>
       </div>
       
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} onClick={() => setActiveModal('gem')} className="aspect-square bg-gray-100 rounded-2xl overflow-hidden relative group cursor-pointer border border-gray-100">
-                    <img src={`https://loremflickr.com/400/400/travel,city?random=${i + Number(guide.id) * 10}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="" />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors"></div>
-                    <div className="absolute bottom-2 left-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span className="text-white text-xs font-bold drop-shadow-md">View details</span>
+      {guidePosts.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {guidePosts.map((post) => (
+                    <div key={post.id} onClick={() => setActiveModal('gem')} className="aspect-square bg-gray-100 rounded-2xl overflow-hidden relative group cursor-pointer border border-gray-100">
+                        <img src={post.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={post.location} />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors"></div>
+                        <div className="absolute bottom-2 left-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <span className="text-white text-xs font-bold drop-shadow-md">{post.location}</span>
+                        </div>
                     </div>
-                </div>
-            ))}
-      </div>
+                ))}
+          </div>
+      ) : (
+          <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+              <p className="text-gray-500 font-medium">This guide hasn't shared any hidden gems yet.</p>
+          </div>
+      )}
 
       <ChatModal 
         isOpen={isChatOpen} 
@@ -197,28 +258,46 @@ const GuideDetails: React.FC = () => {
 
       <Modal isOpen={activeModal === 'book'} onClose={() => setActiveModal(null)} title={`Book a tour with ${guide.name}`}>
           <form className="space-y-4" onSubmit={handleBooking}>
+              {tourPackages.length > 0 && (
+                  <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Select Package (Optional)</label>
+                      <select 
+                          value={selectedPackageId} 
+                          onChange={(e) => setSelectedPackageId(e.target.value)}
+                          className="w-full border-gray-300 rounded-lg p-2.5 border focus:ring-2 focus:ring-indigo-500 font-medium bg-gray-50"
+                      >
+                          <option value="">Custom Tour / None</option>
+                          {tourPackages.map(pkg => (
+                              <option key={pkg.id} value={pkg.id}>{pkg.title} (${pkg.price})</option>
+                          ))}
+                      </select>
+                  </div>
+              )}
+              
               <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Select Date</label>
                   <input 
                       type="date" 
                       value={bookingDate}
+                      min={new Date().toISOString().split('T')[0]}
                       onChange={(e) => setBookingDate(e.target.value)}
-                      className="w-full border-gray-300 rounded-lg p-2 border focus:ring-2 focus:ring-indigo-500" 
+                      className="w-full border-gray-300 rounded-lg p-2.5 border focus:ring-2 focus:ring-indigo-500 font-medium bg-gray-50" 
                       required 
                   />
               </div>
               <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Number of People</label>
-                  <input type="number" min="1" max="10" className="w-full border-gray-300 rounded-lg p-2 border focus:ring-2 focus:ring-indigo-500" required />
+                  <input type="number" min="1" max="10" defaultValue="1" className="w-full border-gray-300 rounded-lg p-2.5 border focus:ring-2 focus:ring-indigo-500 font-medium bg-gray-50" required />
               </div>
               <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Message (Optional)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
                   <textarea 
                       value={bookingNotes}
                       onChange={(e) => setBookingNotes(e.target.value)}
-                      className="w-full border-gray-300 rounded-lg p-2 border focus:ring-2 focus:ring-indigo-500" 
+                      className="w-full border-gray-300 rounded-lg p-3 border focus:ring-2 focus:ring-indigo-500 bg-gray-50" 
                       rows={3} 
                       placeholder="Tell the guide what you're interested in..."
+                      required={!selectedPackageId}
                   ></textarea>
               </div>
               <button 

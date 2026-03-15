@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { Place, GuideProfile, FeedPost } from '../types';
+import { UserProfile, ExaggerationMetrics, EssentialsLocation, Place, GuideProfile, FeedPost } from '../types';
 
 export const dbServices = {
   // --- AUTHENTICATION ---
@@ -170,20 +170,19 @@ export const dbServices = {
         if (error) throw error;
     }
   },
-
   // --- FEED POSTS ---
-  async uploadFeedPost(file: File, caption: string, location: string) {
+  async uploadFeedPost(imageFile: File, caption: string, locationStr: string, lat?: number, lng?: number) {
       const session = await this.getSession();
       const userId = session?.user?.id;
       if (!userId) throw new Error("Must be logged in to post");
 
       // 1. Upload image to Storage
-      const fileExt = file.name.split('.').pop();
+      const fileExt = imageFile.name.split('.').pop();
       const fileName = `${userId}-${Math.random()}.${fileExt}`;
       
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('post_images')
-        .upload(fileName, file);
+        .upload(fileName, imageFile);
 
       if (uploadError) throw uploadError;
 
@@ -199,7 +198,9 @@ export const dbServices = {
             author_id: userId,
             image_url: publicUrl,
             caption: caption,
-            location: location
+            location: locationStr,
+            lat,
+            lng
         })
         .select()
         .single();
@@ -551,5 +552,209 @@ export const dbServices = {
           
        if (error) throw error;
        return data;
+  },
+
+  // --- TOUR PACKAGES ---
+  async createTourPackage(title: string, description: string, price: number, durationHours: number, maxPeople: number) {
+       const session = await this.getSession();
+       const userId = session?.user?.id;
+       if (!userId) throw new Error("Must be logged in to create tour packages");
+
+       const { data, error } = await supabase
+          .from('tour_packages')
+          .insert({
+              guide_id: userId,
+              title,
+              description,
+              price,
+              duration_hours: durationHours,
+              max_people: maxPeople
+          })
+          .select()
+          .single();
+          
+       if (error) throw error;
+       return data;
+  },
+
+  async getTourPackages(guideId: string) {
+       const { data, error } = await supabase
+          .from('tour_packages')
+          .select('*')
+          .eq('guide_id', guideId)
+          .order('created_at', { ascending: false });
+
+       if (error) throw error;
+       return data;
+  },
+
+  async bookTourPackage(packageId: string, guideId: string, dateStr: string, message?: string) {
+       const session = await this.getSession();
+       const userId = session?.user?.id;
+       if (!userId) throw new Error("Must be logged in to book a tour package");
+
+       const { data, error } = await supabase
+          .from('tour_requests')
+          .insert({
+              package_id: packageId,
+              user_id: userId,
+              guide_id: guideId,
+              requested_date: dateStr,
+              message: message || '',
+              status: 'pending'
+          })
+          .select()
+          .single();
+
+       if (error) throw error;
+       return data;
+  },
+
+  async getTourRequests() {
+       const session = await this.getSession();
+       const userId = session?.user?.id;
+       if (!userId) throw new Error("Must be logged in to view requests");
+
+       const { data, error } = await supabase
+          .from('tour_requests')
+          .select(`
+             *,
+             package:tour_packages(*),
+             user:profiles!tour_requests_user_id_fkey(name, avatar_url, username)
+          `)
+          .eq('guide_id', userId)
+          .order('created_at', { ascending: false });
+
+       if (error) throw error;
+       return data;
+  },
+  
+  async updateTourRequestStatus(requestId: string, status: 'accepted' | 'rejected' | 'completed') {
+       const { data, error } = await supabase
+          .from('tour_requests')
+          .update({ status })
+          .eq('id', requestId)
+          .select()
+          .single();
+          
+       if (error) throw error;
+       return data;
+  },
+
+  // --- ESSENTIALS ---
+  async addEssentialsLocation(type: 'water_fountain' | 'public_toilet', lat: number, lng: number, name?: string, description?: string) {
+       const session = await this.getSession();
+       const userId = session?.user?.id;
+       
+       const { data, error } = await supabase
+          .from('essentials_locations')
+          .insert({
+              type,
+              lat,
+              lng,
+              name,
+              description,
+              added_by: userId || null
+          })
+          .select()
+          .single();
+
+       if (error) throw error;
+       return data;
+  },
+
+  async getEssentialsLocations() {
+      const { data: locations, error: locError } = await supabase
+          .from('essentials_locations')
+          .select('*');
+          
+      if (locError && locError.code !== '42P01') throw locError;
+      
+      const { data: allReviews } = await supabase
+          .from('essentials_reviews')
+          .select('location_id, rating');
+      
+      const safeLocs = locations || [];
+      const safeReviews = allReviews || [];
+
+      return safeLocs.map(loc => {
+           const locReviews = safeReviews.filter(r => r.location_id === loc.id.toString());
+           const sum = locReviews.reduce((acc: number, r: any) => acc + (r.rating || 0), 0);
+           return {
+               ...loc,
+               averageRating: locReviews.length > 0 ? sum / locReviews.length : undefined,
+               reviewCount: locReviews.length
+           };
+      }) as EssentialsLocation[];
+  },
+
+  // --- EXAGGERATION RATINGS ---
+  async addExaggerationRating(placeId: string, waitingTime: number, taste: number, crowdedness: number, view: number, comments?: string) {
+       const session = await this.getSession();
+       const userId = session?.user?.id;
+       if (!userId) throw new Error("Must be logged in to rate");
+       
+       const overallScore = (waitingTime + taste + crowdedness + view) / 4;
+
+       const { data, error } = await supabase
+          .from('exaggeration_ratings')
+          .upsert({
+              place_id: placeId,
+              user_id: userId,
+              waiting_time_score: waitingTime,
+              taste_score: taste,
+              crowdedness_score: crowdedness,
+              view_score: view,
+              overall_exaggeration_score: overallScore,
+              comments
+          }, { onConflict: 'place_id,user_id' })
+          .select()
+          .single();
+
+       if (error) throw error;
+       return data;
+  },
+
+  async getExaggerationRatings(placeId: string) {
+       const { data, error } = await supabase
+          .from('exaggeration_ratings')
+          .select(`
+             *,
+             user:profiles!exaggeration_ratings_user_id_fkey(name, avatar_url)
+          `)
+          .eq('place_id', placeId);
+
+       if (error) throw error;
+       return data;
+  },
+
+  async getEssentialsReviews(locationId: string) {
+      const { data, error } = await supabase
+          .from('essentials_reviews')
+          .select('*, profiles(name, avatar_url)')
+          .eq('location_id', locationId)
+          .order('created_at', { ascending: false });
+      if (error && error.code !== '42P01') throw error;
+      return data || [];
+  },
+
+  async addEssentialReview(locationId: string, rating: number, comment: string) {
+      const session = await this.getSession();
+      const userId = session?.user?.id;
+      if (!userId) throw new Error("Must be logged in to review.");
+
+      const { data, error } = await supabase
+          .from('essentials_reviews')
+          .insert({
+              location_id: locationId,
+              user_id: userId,
+              rating,
+              comment
+          })
+          .select()
+          .single();
+      
+      if (error) throw error;
+      return data;
   }
 };

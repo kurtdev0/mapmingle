@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Map, Users, Compass, Droplet, Calendar, Menu, X, Camera, Layout } from 'lucide-react';
+import { Map, Users, Compass, Droplet, Calendar, Menu, X, Camera, Layout, Target } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import AuthModal from './AuthModal';
 import { dbServices } from '../services/dbServices';
@@ -34,11 +34,12 @@ const Navigation: React.FC = () => {
 
   const navItems = [
     { name: 'Feed', path: '/feed', icon: <Layout size={20} /> },
+    { name: 'Discover', path: '/discover', icon: <Map size={20} /> },
     { name: 'Hidden Gems', path: '/', icon: <Compass size={20} /> },
     { name: 'Guides', path: '/guides', icon: <Users size={20} /> },
     { name: 'Essentials', path: '/essentials', icon: <Droplet size={20} /> },
     { name: 'Planner', path: '/planner', icon: <Calendar size={20} /> },
-    { name: 'Truth Scale', path: '/exaggeration', icon: <Map size={20} /> },
+    { name: 'Truth Scale', path: '/exaggeration', icon: <Target size={20} /> },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -78,21 +79,23 @@ const Navigation: React.FC = () => {
 
             <div className="ml-2 pl-2 border-l border-gray-200">
                 {profile ? (
-                    <div className="relative group/profile">
+                    <div className="relative group/profile flex items-center h-full">
                         <Link to="/profile" className="flex items-center gap-2 hover:bg-gray-50 p-1.5 rounded-full transition-colors cursor-pointer">
                             <img src={profile.avatar_url} alt={profile.name} className="w-8 h-8 rounded-full object-cover border border-gray-200" />
                         </Link>
-                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 hidden group-hover/profile:block opacity-0 group-hover/profile:opacity-100 transition-opacity">
-                            <div className="px-4 py-2 border-b border-gray-50 mb-2">
-                                <p className="text-sm font-bold text-gray-900 truncate">{profile.name}</p>
-                                <p className="text-xs text-gray-500 truncate">@{profile.username}</p>
+                        <div className="absolute right-0 top-full pt-2 w-48 z-50 hidden group-hover/profile:block opacity-0 group-hover/profile:opacity-100 transition-opacity">
+                            <div className="bg-white rounded-2xl shadow-xl border border-gray-100 py-2">
+                                <div className="px-4 py-2 border-b border-gray-50 mb-2">
+                                    <p className="text-sm font-bold text-gray-900 truncate">{profile.name}</p>
+                                    <p className="text-xs text-gray-500 truncate">@{profile.username}</p>
+                                </div>
+                                <Link to="/profile" className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 font-medium transition-colors">
+                                    View Profile
+                                </Link>
+                                <button onClick={handleSignOut} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium transition-colors">
+                                    Sign Out
+                                </button>
                             </div>
-                            <Link to="/profile" className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 font-medium transition-colors">
-                                View Profile
-                            </Link>
-                            <button onClick={handleSignOut} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium transition-colors">
-                                Sign Out
-                            </button>
                         </div>
                     </div>
                 ) : (

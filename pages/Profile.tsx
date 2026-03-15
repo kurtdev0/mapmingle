@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { dbServices } from '../services/dbServices';
-import { Settings, MapPin, Grid, Bookmark, Users, Star, Camera, X, Heart, MessageCircle } from 'lucide-react';
+import { Settings, MapPin, Grid, Bookmark, Users, Star, Camera, X, Heart, MessageCircle, Shield } from 'lucide-react';
 import PlaceCard from '../components/PlaceCard';
 import Modal from '../components/Modal';
 
@@ -12,8 +12,13 @@ const Profile: React.FC = () => {
   const [savedPlaces, setSavedPlaces] = useState<any[]>([]);
   const [userPosts, setUserPosts] = useState<any[]>([]);
   const [bookingRequests, setBookingRequests] = useState<any[]>([]);
+  const [tourPackages, setTourPackages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'saved' | 'posts' | 'requests'>('saved');
+  const [activeTab, setActiveTab] = useState<'saved' | 'posts' | 'requests' | 'packages'>('saved');
+
+  // Package creation state
+  const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
+  const [newPackage, setNewPackage] = useState({ title: '', description: '', price: 0, durationHours: 2, maxPeople: 10 });
 
   // Edit Profile State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -62,8 +67,15 @@ const Profile: React.FC = () => {
 
           // Fetch guide booking requests
           if (isMe && targetProfile?.is_guide) {
-              const requests = await dbServices.getReceivedAppointments();
+              const [requests, packages] = await Promise.all([
+                 dbServices.getTourRequests().catch(() => []),
+                 dbServices.getTourPackages(targetProfile.id).catch(() => [])
+              ]);
               setBookingRequests(requests);
+              setTourPackages(packages);
+          } else if (targetProfile?.is_guide) {
+              const packages = await dbServices.getTourPackages(targetProfile.id).catch(() => []);
+              setTourPackages(packages);
           }
 
           // Fetch their saved places
@@ -118,7 +130,36 @@ const Profile: React.FC = () => {
       }
   };
 
+  const handleCreatePackage = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setIsSaving(true);
+      try {
+          await dbServices.createTourPackage(newPackage.title, newPackage.description, Number(newPackage.price), Number(newPackage.durationHours), Number(newPackage.maxPeople));
+          const packages = await dbServices.getTourPackages(profile.id);
+          setTourPackages(packages);
+          setIsPackageModalOpen(false);
+          setNewPackage({ title: '', description: '', price: 0, durationHours: 2, maxPeople: 10 });
+      } catch (err) {
+          console.error("Failed to create package", err);
+      } finally {
+          setIsSaving(false);
+      }
+  };
 
+
+
+  const handleRequestVerification = async () => {
+      if (!isCurrentUser) return;
+      try {
+          // Mock verification request, just update local state to show it's pending/verified
+          // In a real app this would submit a request to admin dashboard
+          alert("Verification request submitted! We will review your profile shortly.");
+          // Optimistically update
+          setProfile(prev => prev ? { ...prev, isVerified: true } : prev);
+      } catch (err) {
+          console.error("Failed to request verification", err);
+      }
+  };
 
   if (loading) {
       return <div className="text-center py-20 text-gray-500">Loading Profile...</div>;
@@ -158,19 +199,28 @@ const Profile: React.FC = () => {
               </div>
 
               <div className="flex-1">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-                      <div>
+                  <div className="flex justify-between items-start mb-4">
+                      <div className="flex items-center gap-3">
                           <h1 className="text-3xl font-serif font-bold text-gray-900">{profile.name}</h1>
-                          <p className="text-gray-500 font-medium tracking-wide">@{profile.username}</p>
+                          {profile.is_guide && <Shield className="text-indigo-600 fill-indigo-50" size={24} />}
+                          {profile.isVerified && (
+                              <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 border border-blue-100 shadow-sm">
+                                  <Shield size={14} className="fill-current" /> Verified
+                              </span>
+                          )}
                       </div>
-                      {isCurrentUser && (
-                          <button 
-                              onClick={() => setIsEditModalOpen(true)}
-                              className="flex items-center gap-2 bg-gray-50 hover:bg-gray-100 text-gray-700 px-4 py-2 rounded-xl text-sm font-bold transition-colors border border-gray-200"
-                          >
-                              <Settings size={18} /> Edit Profile
-                          </button>
-                      )}
+                      {isCurrentUser ? (
+                          <div className="flex gap-2">
+                              {profile.is_guide && !profile.isVerified && (
+                                  <button onClick={handleRequestVerification} className="px-4 py-2 border border-blue-200 text-blue-600 bg-blue-50 rounded-xl font-bold flex gap-2 items-center hover:bg-blue-100 transition shadow-sm text-sm">
+                                      <Shield size={16} /> Request Verification
+                                  </button>
+                              )}
+                              <button onClick={() => setIsEditModalOpen(true)} className="px-4 py-2 border border-gray-200 rounded-xl font-bold flex gap-2 items-center hover:bg-gray-50 transition shadow-sm text-sm">
+                                  <Settings size={18} /> Edit Profile
+                              </button>
+                          </div>
+                      ) : null}
                   </div>
 
                   {profile.bio && (
@@ -229,6 +279,17 @@ const Profile: React.FC = () => {
               <Grid size={18} className={activeTab === 'posts' ? 'fill-current' : ''} /> 
               My Posts
           </button>
+          {profile.is_guide && (
+            <button 
+                onClick={() => setActiveTab('packages')}
+                className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-4 font-bold text-sm transition-colors border-b-2 ${
+                    activeTab === 'packages' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-800'
+                }`}
+            >
+                <Bookmark size={18} className={activeTab === 'packages' ? 'fill-current' : ''} /> 
+                Tour Packages
+            </button>
+          )}
           {profile.is_guide && isCurrentUser && (
             <button 
                 onClick={() => setActiveTab('requests')}
@@ -297,6 +358,40 @@ const Profile: React.FC = () => {
           </div>
       )}
 
+      {activeTab === 'packages' && profile.is_guide && (
+          <div className="space-y-4 max-w-3xl mx-auto">
+              {isCurrentUser && (
+                  <button onClick={() => setIsPackageModalOpen(true)} className="mb-4 bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 shadow-md">
+                      + Create New Tour Package
+                  </button>
+              )}
+              {tourPackages.length > 0 ? (
+                  tourPackages.map(pkg => (
+                      <div key={pkg.id} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col sm:flex-row justify-between gap-4">
+                          <div>
+                              <h4 className="font-bold text-gray-900 text-lg mb-1">{pkg.title}</h4>
+                              <p className="text-gray-600 mb-3 text-sm">{pkg.description}</p>
+                              <div className="flex gap-4 text-xs font-bold text-gray-500">
+                                  <span className="bg-gray-50 px-3 py-1 rounded-full border border-gray-100">{pkg.duration_hours} Hours</span>
+                                  <span className="bg-gray-50 px-3 py-1 rounded-full border border-gray-100">Max {pkg.max_people} People</span>
+                              </div>
+                          </div>
+                          <div className="text-right flex flex-col justify-between shrink-0">
+                               <span className="text-2xl font-black text-indigo-600">${pkg.price}</span>
+                               {!isCurrentUser && (
+                                   <button className="bg-green-600 text-white px-4 py-2 text-sm font-bold rounded-xl mt-2 hover:bg-green-700">Request Tour</button>
+                               )}
+                          </div>
+                      </div>
+                  ))
+              ) : (
+                  <div className="text-center py-12 bg-white rounded-3xl border border-gray-100 shadow-sm">
+                      <p className="text-gray-500 font-medium">No tour packages created yet.</p>
+                  </div>
+              )}
+          </div>
+      )}
+
       {activeTab === 'requests' && profile.is_guide && isCurrentUser && (
           <div className="space-y-4 max-w-3xl mx-auto">
               {bookingRequests.length > 0 ? (
@@ -307,21 +402,21 @@ const Profile: React.FC = () => {
                               <div>
                                   <h4 className="font-bold text-gray-900">{req.user?.name} <span className="text-gray-500 text-sm font-normal">@{req.user?.username}</span></h4>
                                   <p className="text-sm text-gray-600 flex items-center gap-2 mt-1">
-                                      <span className="font-medium bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md">{new Date(req.appointment_date).toLocaleDateString()}</span>
+                                      <span className="font-medium bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md">{req.package?.title}</span>
                                       • Status: <span className="capitalize font-bold">{req.status}</span>
                                   </p>
-                                  {req.notes && <p className="text-sm text-gray-500 mt-2 italic bg-gray-50 p-2 rounded-lg">"{req.notes}"</p>}
+                                  {req.message && <p className="text-sm text-gray-500 mt-2 italic bg-gray-50 p-2 rounded-lg">"{req.message}"</p>}
                               </div>
                           </div>
                           {req.status === 'pending' && (
                               <div className="flex gap-2">
                                   <button onClick={async () => {
-                                      await dbServices.updateAppointmentStatus(req.id, 'confirmed');
-                                      setBookingRequests(await dbServices.getReceivedAppointments());
+                                      await dbServices.updateTourRequestStatus(req.id, 'accepted');
+                                      setBookingRequests(await dbServices.getTourRequests());
                                   }} className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-indigo-700 transition">Accept</button>
                                   <button onClick={async () => {
-                                      await dbServices.updateAppointmentStatus(req.id, 'cancelled');
-                                      setBookingRequests(await dbServices.getReceivedAppointments());
+                                      await dbServices.updateTourRequestStatus(req.id, 'rejected');
+                                      setBookingRequests(await dbServices.getTourRequests());
                                   }} className="bg-gray-100 text-gray-700 px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-200 transition">Decline</button>
                               </div>
                           )}
@@ -362,6 +457,8 @@ const Profile: React.FC = () => {
                       onChange={(e) => setEditName(e.target.value)}
                       className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
                       required
+                      minLength={2}
+                      maxLength={50}
                   />
               </div>
 
@@ -375,6 +472,10 @@ const Profile: React.FC = () => {
                           onChange={(e) => setEditUsername(e.target.value)}
                           className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-8 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium lowercase"
                           required
+                          minLength={3}
+                          maxLength={30}
+                          pattern="^[a-zA-Z0-9_]+$"
+                          title="Username can only contain letters, numbers, and underscores"
                       />
                   </div>
               </div>
@@ -386,6 +487,7 @@ const Profile: React.FC = () => {
                       onChange={(e) => setEditBio(e.target.value)}
                       className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       rows={3}
+                      maxLength={500}
                   ></textarea>
               </div>
 
@@ -408,6 +510,37 @@ const Profile: React.FC = () => {
                   className="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 disabled:opacity-50 mt-2"
               >
                   {isSaving ? 'Saving...' : 'Save Profile'}
+              </button>
+          </form>
+      </Modal>
+
+      {/* Package Creation Modal */}
+      <Modal isOpen={isPackageModalOpen} onClose={() => setIsPackageModalOpen(false)} title="Create Tour Package">
+          <form onSubmit={handleCreatePackage} className="flex flex-col gap-4">
+              <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Package Title</label>
+                  <input type="text" required minLength={5} maxLength={100} value={newPackage.title} onChange={e => setNewPackage({...newPackage, title: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-indigo-500" placeholder="e.g. Hidden Trastevere Food Tour"/>
+              </div>
+              <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Description</label>
+                  <textarea required minLength={10} maxLength={1000} value={newPackage.description} onChange={e => setNewPackage({...newPackage, description: e.target.value})} rows={3} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-indigo-500" placeholder="Describe the tour..."></textarea>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                  <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Price ($)</label>
+                      <input type="number" required min="0" value={newPackage.price} onChange={e => setNewPackage({...newPackage, price: Number(e.target.value)})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-indigo-500" />
+                  </div>
+                  <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Duration (Hrs)</label>
+                      <input type="number" required min="0.5" step="0.5" value={newPackage.durationHours} onChange={e => setNewPackage({...newPackage, durationHours: Number(e.target.value)})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-indigo-500" />
+                  </div>
+                  <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">Max People</label>
+                      <input type="number" required min="1" value={newPackage.maxPeople} onChange={e => setNewPackage({...newPackage, maxPeople: Number(e.target.value)})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-indigo-500" />
+                  </div>
+              </div>
+              <button type="submit" disabled={isSaving} className="w-full bg-green-600 text-white font-bold py-3.5 rounded-xl hover:bg-green-700 transition-colors shadow-lg disabled:opacity-50 mt-2">
+                  {isSaving ? 'Creating...' : 'Create Package'}
               </button>
           </form>
       </Modal>

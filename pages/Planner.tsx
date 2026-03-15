@@ -1,13 +1,36 @@
 import React, { useState } from 'react';
 import * as Gemini from '../services/geminiService';
 import { ItineraryDay } from '../types';
-import { Sun, Sunset, Moon, Coffee, Calendar } from 'lucide-react';
+import { Sun, Sunset, Moon, Coffee, Calendar, MapPin } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Day colors for distinct paths
+const DAY_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6'];
+
+// Fix for default marker icons in Leaflet with React
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+// Helper component to change map view dynamically
+const ChangeView = ({ center, zoom }: { center: [number, number], zoom: number }) => {
+  const map = useMap();
+  map.setView(center, zoom);
+  return null;
+};
 
 const Planner: React.FC = () => {
   const [destination, setDestination] = useState('');
   const [days, setDays] = useState(3);
   const [itinerary, setItinerary] = useState<ItineraryDay[]>([]);
   const [loading, setLoading] = useState(false);
+  const [mapCenter, setMapCenter] = useState<[number, number]>([48.8566, 2.3522]); // Default Paris
+  const [markers, setMarkers] = useState<{lat: number, lng: number, title: string, day: number}[]>([]);
 
   const generateItinerary = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,28 +40,57 @@ const Planner: React.FC = () => {
         const plan = await Gemini.getItinerary(destination, days);
         if (plan && plan.length > 0) {
            setItinerary(plan);
+           
+           // Calculate average center from returned coordinates, fallback to default if missing
+           const allLocations = plan.flatMap(d => d.locations || []);
+           const validCoords = allLocations.filter(loc => loc.lat !== undefined && loc.lng !== undefined);
+           
+           if (validCoords.length > 0) {
+               const centerLat = validCoords.reduce((sum, loc) => sum + (loc.lat || 0), 0) / validCoords.length;
+               const centerLng = validCoords.reduce((sum, loc) => sum + (loc.lng || 0), 0) / validCoords.length;
+               setMapCenter([centerLat, centerLng]);
+               
+               const newMarkers: any[] = [];
+               plan.forEach(d => {
+                   if (d.locations) {
+                       d.locations.forEach((loc, idx) => {
+                           newMarkers.push({
+                               lat: loc.lat,
+                               lng: loc.lng,
+                               title: loc.name,
+                               day: d.day,
+                               step: idx + 1,
+                               type: loc.type
+                           });
+                       });
+                   }
+               });
+               setMarkers(newMarkers);
+           } else {
+               // Geocode fallback if AI failed to return any specific coordinates
+               const geocoded = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(destination)}`)
+                  .then(r => r.json());
+               
+               if (geocoded && geocoded.length > 0) {
+                   const lat = parseFloat(geocoded[0].lat);
+                   const lng = parseFloat(geocoded[0].lon);
+                   setMapCenter([lat, lng]);
+               }
+           }
         } else {
            throw new Error("No plan returned");
         }
     } catch (e) {
-        console.warn("API Error, providing mock itinerary", e);
-        // Mock data fallback
-        const mockPlan: ItineraryDay[] = Array.from({ length: days }).map((_, i) => ({
-            day: i + 1,
-            morning: `Explore the hidden alleys of ${destination} and visit a local cafe.`,
-            afternoon: `Visit the central museum and take a walk in the main park.`,
-            evening: `Enjoy sunset views from a prominent vantage point.`,
-            food: `Try the famous local street food near the night market.`
-        }));
-        setItinerary(mockPlan);
+        console.warn("API Error, couldn't fetch data", e);
+        alert("Could not generate itinerary. Please try again.");
     } finally {
         setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="max-w-3xl mx-auto">
+    <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden mb-10">
           <div className="bg-indigo-600 px-8 py-8 text-center">
             <h1 className="text-3xl font-bold text-white flex items-center justify-center gap-3">
@@ -55,6 +107,8 @@ const Planner: React.FC = () => {
                     <input 
                         type="text" 
                         required
+                        minLength={2}
+                        maxLength={100}
                         className="w-full border-gray-300 border rounded-lg px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500"
                         placeholder="e.g., Paris, Tokyo, New York"
                         value={destination}
@@ -86,53 +140,126 @@ const Planner: React.FC = () => {
             </form>
           </div>
         </div>
+      </div>
 
-        {itinerary.length > 0 && (
-            <div className="space-y-8">
-                {itinerary.map((day) => (
-                    <div key={day.day} className="bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-lg transition-shadow">
-                        <div className="bg-gray-50 px-6 py-3 border-b border-gray-200 font-bold text-gray-500 uppercase tracking-wide text-sm">
-                            Day {day.day}
-                        </div>
-                        <div className="p-6 grid gap-6 md:grid-cols-2">
-                            <div className="space-y-4">
-                                <div className="flex gap-3">
-                                    <div className="mt-1"><Sun className="w-5 h-5 text-orange-400" /></div>
-                                    <div>
-                                        <h4 className="font-bold text-gray-900">Morning</h4>
-                                        <p className="text-gray-600 text-sm">{day.morning}</p>
+      {itinerary.length > 0 && (
+          <div className="flex flex-col lg:flex-row gap-8">
+              {/* Left side: Itinerary List */}
+              <div className="w-full lg:w-1/3 xl:w-1/4 space-y-6 max-h-[800px] overflow-y-auto pr-4 custom-scrollbar">
+                    {itinerary.map((day) => (
+                        <div key={day.day} className="bg-white border border-gray-100 rounded-3xl overflow-hidden hover:shadow-xl hover:border-indigo-100 transition-all shadow-sm">
+                            <div className="bg-gradient-to-r from-indigo-50 to-white px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                                <span className="font-extrabold text-indigo-900 text-lg">Day {day.day}</span>
+                                <span className="text-xs font-bold text-indigo-500 uppercase tracking-wider bg-white px-3 py-1 rounded-full shadow-sm">Itinerary</span>
+                            </div>
+                            <div className="p-6 grid gap-6">
+                                <div className="space-y-5">
+                                    <div className="flex gap-4">
+                                        <div className="mt-0.5 bg-orange-50 p-2 rounded-xl h-fit shadow-sm"><Sun className="w-5 h-5 text-orange-500" /></div>
+                                        <div>
+                                            <h4 className="font-bold text-gray-900 mb-1">Morning</h4>
+                                            <p className="text-gray-600 text-sm leading-relaxed">{day.morning}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <div className="mt-0.5 bg-yellow-50 p-2 rounded-xl h-fit shadow-sm"><Sun className="w-5 h-5 text-yellow-500" /></div>
+                                        <div>
+                                            <h4 className="font-bold text-gray-900 mb-1">Afternoon</h4>
+                                            <p className="text-gray-600 text-sm leading-relaxed">{day.afternoon}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <div className="mt-0.5 bg-purple-50 p-2 rounded-xl h-fit shadow-sm"><Sunset className="w-5 h-5 text-purple-600" /></div>
+                                        <div>
+                                            <h4 className="font-bold text-gray-900 mb-1">Evening</h4>
+                                            <p className="text-gray-600 text-sm leading-relaxed">{day.evening}</p>
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="flex gap-3">
-                                    <div className="mt-1"><Sun className="w-5 h-5 text-yellow-500" /></div>
-                                    <div>
-                                        <h4 className="font-bold text-gray-900">Afternoon</h4>
-                                        <p className="text-gray-600 text-sm">{day.afternoon}</p>
+                                <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100 relative overflow-hidden">
+                                     <div className="absolute top-0 right-0 w-16 h-16 bg-indigo-100 rounded-bl-full -mr-8 -mt-8"></div>
+                                    <div className="flex items-center gap-2 mb-2 text-indigo-700 font-bold relative z-10">
+                                        <Coffee className="w-5 h-5" />
+                                        Must Eat
                                     </div>
-                                </div>
-                                <div className="flex gap-3">
-                                    <div className="mt-1"><Sunset className="w-5 h-5 text-purple-500" /></div>
-                                    <div>
-                                        <h4 className="font-bold text-gray-900">Evening</h4>
-                                        <p className="text-gray-600 text-sm">{day.evening}</p>
-                                    </div>
+                                    <p className="text-gray-800 text-sm font-medium italic relative z-10 leading-relaxed">
+                                        "{day.food}"
+                                    </p>
                                 </div>
                             </div>
-                            <div className="bg-indigo-50 rounded-xl p-5 flex flex-col justify-center">
-                                <div className="flex items-center gap-2 mb-2 text-indigo-700 font-bold">
-                                    <Coffee className="w-5 h-5" />
-                                    Must Eat
-                                </div>
-                                <p className="text-indigo-900 text-sm font-medium italic">
-                                    "{day.food}"
-                                </p>
-                            </div>
                         </div>
+                    ))}
+                </div>
+
+                {/* Right side: Map */}
+                <div className="w-full lg:w-2/3 xl:w-3/4 h-[500px] lg:h-[800px] rounded-3xl overflow-hidden shadow-xl border border-gray-200 relative sticky top-6 z-0">
+                     <MapContainer center={mapCenter} zoom={13} className="w-full h-full z-0" zoomControl={false}>
+                        <TileLayer
+                            attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+                            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+                        />
+                        <ChangeView center={mapCenter} zoom={13} />
+
+                        {/* Draw Polylines for each day */}
+                        {itinerary.map((dayPlan) => {
+                            if (!dayPlan.locations || dayPlan.locations.length < 2) return null;
+                            const pathCoords: [number, number][] = dayPlan.locations.map(loc => [loc.lat, loc.lng]);
+                            const color = DAY_COLORS[(dayPlan.day - 1) % DAY_COLORS.length];
+                            
+                            // To simulate "arrows", we can use a dashed line or just rely on the step numbers.
+                            return (
+                                <Polyline 
+                                    key={`path-day-${dayPlan.day}`} 
+                                    positions={pathCoords} 
+                                    pathOptions={{ 
+                                        color: color, 
+                                        weight: 4, 
+                                        opacity: 0.8,
+                                        dashArray: '10, 10' // Creates a dotted/dashed visual path line
+                                    }} 
+                                />
+                            );
+                        })}
+
+                        {/* Draw Markers */}
+                        {markers.map((marker: any, idx) => {
+                            const markerColor = DAY_COLORS[(marker.day - 1) % DAY_COLORS.length];
+                            
+                            // Create custom colored HTML icon for sequence
+                            const customIcon = L.divIcon({
+                                className: 'custom-div-icon',
+                                html: `<div style="background-color: ${markerColor}; width: 28px; height: 28px; border-radius: 50%; border: 3px solid white; box-shadow: 0 3px 6px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-family: sans-serif; font-size: 14px;">${marker.step || 1}</div>`,
+                                iconSize: [28, 28],
+                                iconAnchor: [14, 14]
+                            });
+
+                            return (
+                                <Marker key={idx} position={[marker.lat, marker.lng]} icon={customIcon}>
+                                    <Popup className="rounded-2xl min-w-[200px]">
+                                        <div className="font-bold text-gray-900 text-base">{marker.title}</div>
+                                        <div className="text-sm text-gray-600 capitalize mt-0.5">{marker.type || 'Activity'}</div>
+                                        <div className="mt-2 text-white px-2.5 py-1 rounded-md font-bold text-xs inline-block shadow-sm" style={{ backgroundColor: markerColor }}>
+                                            Day {marker.day} • Stop {marker.step}
+                                        </div>
+                                    </Popup>
+                                </Marker>
+                            );
+                        })}
+                    </MapContainer>
+                    <div className="absolute bottom-6 right-6 z-[1000] bg-white p-4 rounded-2xl shadow-xl flex flex-col gap-2 max-w-[200px]">
+                         <div className="text-xs font-bold text-gray-900 uppercase tracking-widest mb-1 border-b border-gray-100 pb-2">Day Paths</div>
+                         <div className="flex flex-col gap-2 pt-1 max-h-[150px] overflow-y-auto pr-2 custom-scrollbar">
+                             {itinerary.map(day => (
+                                 <div key={`legend-day-${day.day}`} className="flex items-center gap-2">
+                                     <div className="w-4 h-4 rounded-full border-2 border-white shadow-sm" style={{ backgroundColor: DAY_COLORS[(day.day - 1) % DAY_COLORS.length] }}></div>
+                                     <span className="text-xs font-bold text-gray-700">Day {day.day} Path</span>
+                                 </div>
+                             ))}
+                         </div>
                     </div>
-                ))}
+                </div>
             </div>
         )}
-      </div>
     </div>
   );
 };

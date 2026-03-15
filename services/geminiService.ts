@@ -9,72 +9,42 @@ const REASONING_MODEL = 'gemini-3-flash-preview';
 
 export const searchPlaces = async (query: string, location?: { lat: number; lng: number }): Promise<Place[]> => {
   try {
-    const retrievalConfig = location ? {
-      retrievalConfig: {
-        latLng: {
-          latitude: location.lat,
-          longitude: location.lng
-        }
-      }
-    } : {};
-
     const response = await ai.models.generateContent({
-      model: MAPS_MODEL,
-      contents: `List 5 specific, real places matching this request: "${query}". For each place, provide a name and a very short description.`,
-      config: {
-        tools: [{ googleMaps: {} }],
-        toolConfig: retrievalConfig
-      }
+      model: REASONING_MODEL,
+      contents: `You are a travel API. Find 3 specific, hidden gem locations matching: "${query}". 
+      Return a RAW JSON array of objects. Do not use markdown blocks. Each object MUST have this exact structure:
+      {
+        "name": "Exact Place Name",
+        "address": "City, Country",
+        "rating": 4.8,
+        "tags": ["Hidden Gem", "Unique"],
+        "uri": "https://www.google.com/maps/search/?api=1&query=Exact+Place+Name",
+        "photoUrl": "https://loremflickr.com/800/600/travel,landmark?random=xxx"
+      }`,
     });
 
-    const candidates = response.candidates;
-    if (!candidates || candidates.length === 0) return [];
-
-    const groundingChunks = candidates[0].groundingMetadata?.groundingChunks;
-    const places: Place[] = [];
-
-    // 1. Try to get data from Grounding (Best Source)
-    if (groundingChunks) {
-      groundingChunks.forEach((chunk: any) => {
-        if (chunk.maps) {
-          places.push({
-            name: chunk.maps.title,
-            address: chunk.maps.placeId, // Maps grounding often gives Place ID or address
-            uri: chunk.maps.uri,
-            rating: 4.0 + Math.random(), // Simulate high ratings for recommended spots
-            userRatingsTotal: Math.floor(Math.random() * 500) + 50,
-            photoUrl: `https://loremflickr.com/800/600/travel,${encodeURIComponent(chunk.maps.title.split(' ')[0])}?random=${Math.random()}`
-          });
+    try {
+        let text = response.text || "[]";
+        // Clean markdown if present
+        text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(text);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed.map((p: any, idx) => ({
+                name: p.name || p.title || 'Unknown Hidden Gem',
+                address: p.address || p.location || 'Unknown Location',
+                rating: p.rating || 4.5,
+                tags: Array.isArray(p.tags) ? p.tags : ['Hidden Gem', 'Unique'],
+                uri: p.uri || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name || query)}`,
+                photoUrl: p.photoUrl && p.photoUrl.includes('http') ? p.photoUrl : `https://loremflickr.com/800/600/travel,landmark?random=${Math.random() * 1000 + idx}`
+            })).slice(0, 3);
         }
-      });
+    } catch (e) {
+        console.error("JSON parsing failed, falling back", e);
     }
-
-    // 2. Fallback: Parse text if Grounding fails or returns nothing useful (Robustness)
-    if (places.length === 0 && response.text) {
-        const lines = response.text.split('\n');
-        lines.forEach(line => {
-            // Simple heuristic to catch list items like "1. Eiffel Tower" or "- Colosseum"
-            const match = line.match(/^[\d-]+\.\s*\*?(.*?)\*?(:|-|$)/);
-            if (match && match[1]) {
-                const name = match[1].trim();
-                places.push({
-                    name: name,
-                    address: "Location details available on map",
-                    uri: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}`,
-                    rating: 4.5,
-                    tags: ['Discovered'],
-                    photoUrl: `https://loremflickr.com/800/600/landmark,${encodeURIComponent(name.replace(/\s/g, ','))}?random=${Math.random()}`
-                });
-            }
-        });
-    }
-
-    // Deduplicate based on name
-    return Array.from(new Map(places.map(item => [item.name, item])).values()).slice(0, 6);
-
+    throw new Error("Invalid response");
   } catch (error) {
     console.error("Gemini Search Error:", error);
-    return [];
+    throw error; // Let Home.tsx handle the mock data fallback
   }
 };
 
@@ -95,18 +65,24 @@ export const getWaterSafety = async (city: string): Promise<WaterSafetyInfo> => 
       }
     });
     
-    if (response.text) {
-      const data = JSON.parse(response.text);
-      return {
-        isSafe: data.isSafe,
-        details: data.details,
-        locations: []
-      };
+    try {
+        let text = response.text || "{}";
+        text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        const data = JSON.parse(text);
+        if (typeof data.isSafe === 'boolean') {
+            return {
+                isSafe: data.isSafe,
+                details: data.details || "No details provided.",
+                locations: []
+            };
+        }
+    } catch (e) {
+        console.error("Water Safety JSON parsing failed", e);
     }
-    throw new Error("No data returned");
+    throw new Error("Invalid response format");
   } catch (error) {
     console.error("Water Safety Error:", error);
-    return { isSafe: false, details: "Could not fetch safety info.", locations: [] };
+    throw error;
   }
 };
 
@@ -114,7 +90,16 @@ export const getExaggerationScore = async (placeName: string): Promise<Exaggerat
   try {
     const response = await ai.models.generateContent({
       model: REASONING_MODEL,
-      contents: `Rate how overrated "${placeName}" is on a scale of 1 to 10 (10 being extremely overrated/tourist trap, 1 being a hidden gem). Be honest and critical. Provide a short verdict and reasoning.`,
+      contents: `Rate "${placeName}" on these 6 metrics on a scale of 1 to 10, where 10 is the best (or most intense): 
+      - waitingTime (1 = no wait, 10 = terrible lines)
+      - taste (1 = terrible, 10 = amazing, if not applicable use 5)
+      - crowdedness (1 = empty, 10 = completely packed)
+      - view (1 = nothing special, 10 = breathtaking)
+      - valueForMoney (1 = complete ripoff, 10 = incredible deal)
+      - accessibility (1 = impossible to reach, 10 = extremely easy/accessible)
+      
+      Also provide an overall exaggeration 'score' (1 to 10, 10 meaning highly overrated/tourist trap, 1 meaning hidden gem).
+      Provide a short 'verdict' and 'reasoning'.`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -123,7 +108,18 @@ export const getExaggerationScore = async (placeName: string): Promise<Exaggerat
             placeName: { type: Type.STRING },
             score: { type: Type.NUMBER },
             verdict: { type: Type.STRING },
-            reasoning: { type: Type.STRING }
+            reasoning: { type: Type.STRING },
+            metrics: {
+              type: Type.OBJECT,
+              properties: {
+                waitingTime: { type: Type.NUMBER },
+                taste: { type: Type.NUMBER },
+                crowdedness: { type: Type.NUMBER },
+                view: { type: Type.NUMBER },
+                valueForMoney: { type: Type.NUMBER },
+                accessibility: { type: Type.NUMBER }
+              }
+            }
           }
         }
       }
@@ -134,7 +130,13 @@ export const getExaggerationScore = async (placeName: string): Promise<Exaggerat
     }
     throw new Error("No score returned");
   } catch (error) {
-    return { placeName, score: 5, verdict: "Unknown", reasoning: "Could not analyze." };
+    return { 
+      placeName, 
+      score: 5, 
+      verdict: "Unknown", 
+      reasoning: "Could not analyze.",
+      metrics: { waitingTime: 5, taste: 5, crowdedness: 5, view: 5, valueForMoney: 5, accessibility: 5 }
+    };
   }
 };
 
@@ -142,7 +144,7 @@ export const getItinerary = async (location: string, days: number): Promise<Itin
   try {
     const response = await ai.models.generateContent({
       model: REASONING_MODEL,
-      contents: `Create a ${days}-day must-see and must-eat itinerary for ${location}. Return a JSON array.`,
+      contents: `Create a ${days}-day must-see and must-eat itinerary for ${location}. Return a RAW JSON array. For each day, provide the structured schedule strings (morning/afternoon/evening/food). CRITICALLY: provide a 'locations' array containing EXACTLY the 3-5 specific places visited that day in chronological order. Give the exact 'lat' (latitude) and 'lng' (longitude) coordinates for each place so they can be plotted on a map and connected by walking arrows.`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -154,19 +156,40 @@ export const getItinerary = async (location: string, days: number): Promise<Itin
               morning: { type: Type.STRING },
               afternoon: { type: Type.STRING },
               evening: { type: Type.STRING },
-              food: { type: Type.STRING, description: "Must eat recommendation" }
+              food: { type: Type.STRING, description: "Must eat recommendation" },
+              locations: {
+                  type: Type.ARRAY,
+                  description: "List of exactly 3-4 specific places visited this day in order (e.g., Morning Activity, Lunch, Afternoon, Dinner)",
+                  items: {
+                      type: Type.OBJECT,
+                      properties: {
+                          name: { type: Type.STRING },
+                          lat: { type: Type.NUMBER },
+                          lng: { type: Type.NUMBER },
+                          type: { type: Type.STRING }
+                      }
+                  }
+              }
             }
           }
         }
       }
     });
 
-    if (response.text) {
-      return JSON.parse(response.text) as ItineraryDay[];
+    try {
+        let text = response.text || "[]";
+        // Clean markdown if present
+        text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(text);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed as ItineraryDay[];
+        }
+    } catch (e) {
+        console.error("JSON parsing failed, falling back", e);
     }
-    return [];
+    throw new Error("Invalid response");
   } catch (error) {
-    console.error("Itinerary Error:", error);
-    return [];
+    console.error("Gemini Itinerary Error:", error);
+    throw error;
   }
 };

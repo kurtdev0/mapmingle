@@ -6,6 +6,7 @@
     <title>MapMingle</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <style>
       body {
         font-family: 'Inter', sans-serif;
@@ -27,6 +28,16 @@
       }
       ::-webkit-scrollbar-thumb:hover {
         background: #94a3b8; 
+      }
+      /* Fix Leaflet Z-Index issues where maps overlap UI elements */
+      .leaflet-pane {
+        z-index: 10 !important;
+      }
+      .leaflet-top, .leaflet-bottom {
+        z-index: 20 !important;
+      }
+      .leaflet-control {
+        z-index: 20 !important;
       }
     </style>
   <script type="importmap">
