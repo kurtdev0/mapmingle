@@ -93,50 +93,56 @@ const Essentials: React.FC = () => {
     }
   };
 
+  const fetchTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastFetchKey = React.useRef<string>('');
+  const [loadingOsm, setLoadingOsm] = React.useState(false);
+
   const fetchOsmData = async (lat: number, lng: number) => {
+    // Only skip if the map center hasn't changed significantly (~11km grid)
+    const fetchKey = `${lat.toFixed(1)},${lng.toFixed(1)}`;
+    if (fetchKey === lastFetchKey.current) return;
+    lastFetchKey.current = fetchKey;
+
+    setLoadingOsm(true);
     try {
-      // Overpass API query for drinking water and toilets around the center (radius 3000m)
-      const radius = 3000;
-      const query = `
-        [out:json];
-        (
-          node["amenity"="drinking_water"](around:${radius},${lat},${lng});
-          node["amenity"="toilets"](around:${radius},${lat},${lng});
-        );
-        out body;
-      `;
-      const response = await fetch('https://overpass-api.de/api/interpreter', {
-        method: 'POST',
-        body: query
-      });
-      const data = await response.json();
-      
-      const formatted: EssentialsLocation[] = data.elements.map((el: any) => ({
-        id: `osm-${el.id}`,
-        type: el.tags.amenity === 'drinking_water' ? 'water_fountain' : 'public_toilet',
-        lat: el.lat,
-        lng: el.lon,
-        name: el.tags.name || (el.tags.amenity === 'drinking_water' ? 'Public Drinking Water' : 'Public Toilet'),
-        description: 'Sourced from OpenStreetMap public records.',
-        isVerified: true
-      }));
-      setOsmLocations(formatted);
+      const response = await Gemini.getEssentialsLocations(lat, lng);
+      if (response && response.length > 0) {
+        setOsmLocations(response.map((loc: any, idx: number) => ({
+          id: `ai-${idx}-${lat.toFixed(3)}-${lng.toFixed(3)}`,
+          type: loc.type === 'toilet' ? 'public_toilet' as const : 'water_fountain' as const,
+          lat: loc.lat,
+          lng: loc.lng,
+          name: loc.name || (loc.type === 'toilet' ? 'Public Toilet' : 'Drinking Water'),
+          description: loc.description || 'Known public amenity location.',
+          isVerified: true
+        })));
+      }
     } catch (error) {
-        console.error("Failed to fetch from OSM", error);
+        console.error("Failed to fetch essentials data", error);
+    } finally {
+      setLoadingOsm(false);
     }
   };
 
-  // Helper component to track map center moves to fetch OSM data
+  // Helper component to track map center moves to fetch data (debounced)
   const MapCenterTracker = () => {
       const map = useMapEvents({
           moveend() {
               const center = map.getCenter();
               setMapCenter([center.lat, center.lng]);
-              fetchOsmData(center.lat, center.lng);
+              
+              // Debounce: wait 800ms after last pan before fetching  
+              if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
+              fetchTimeoutRef.current = setTimeout(() => {
+                  fetchOsmData(center.lat, center.lng);
+              }, 800);
           }
       });
-      // Initial fetch based on default center
+      // Fix gray tiles on SPA re-visit + initial data fetch
       useEffect(() => {
+          setTimeout(() => {
+              map.invalidateSize();
+          }, 200);
           fetchOsmData(mapCenter[0], mapCenter[1]);
       }, []);
       return null;
@@ -399,7 +405,7 @@ const Essentials: React.FC = () => {
                         </div>
                         {loc.description && <div className="text-sm text-gray-600 mt-1">{loc.description}</div>}
                         <div className="text-[10px] text-gray-400 mt-2 uppercase tracking-wide">
-                            {loc.id.toString().startsWith('osm-') ? 'OpenStreetMap Data' : 'Community Contributed'}
+                            {loc.id.toString().startsWith('ai-') ? 'AI-Powered Data' : 'Community Contributed'}
                         </div>
                         <button 
                             onClick={() => openReviewModal(loc)}
@@ -412,6 +418,12 @@ const Essentials: React.FC = () => {
             ))}
             
           </MapContainer>
+          {loadingOsm && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-white/90 backdrop-blur-sm px-5 py-2.5 rounded-full shadow-lg border border-gray-100 flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                  <span className="text-sm font-bold text-gray-700">Finding nearby spots...</span>
+              </div>
+          )}
           {isAddMode && (
               <div className="absolute inset-0 border-4 border-red-500 border-dashed pointer-events-none z-[400] bg-red-500/5"></div>
           )}

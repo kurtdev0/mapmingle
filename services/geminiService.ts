@@ -193,3 +193,46 @@ export const getItinerary = async (location: string, days: number): Promise<Itin
     throw error;
   }
 };
+
+export const getEssentialsLocations = async (lat: number, lng: number): Promise<{name: string, lat: number, lng: number, type: string, description: string}[]> => {
+  try {
+    const response = await ai.models.generateContent({
+      model: MAPS_MODEL,
+      contents: `You are a travel utilities API. For the area near latitude ${lat}, longitude ${lng}, list REAL, KNOWN public drinking water fountains and public toilets/restrooms.
+
+Return a JSON array of 15-25 locations. Include a mix of both types. Each item must have:
+- "name": the actual name or a descriptive label
+- "lat": exact latitude (number)
+- "lng": exact longitude (number)  
+- "type": either "water" or "toilet"
+- "description": a short useful note (e.g. "Free nasone fountain near Colosseum", "Public WC inside metro station")
+
+Focus on REAL locations that actually exist. Spread them across the visible area, not in a line.`,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              name: { type: Type.STRING },
+              lat: { type: Type.NUMBER },
+              lng: { type: Type.NUMBER },
+              type: { type: Type.STRING },
+              description: { type: Type.STRING }
+            }
+          }
+        }
+      }
+    });
+
+    let text = response.text || "[]";
+    text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    const parsed = JSON.parse(text);
+    if (Array.isArray(parsed)) return parsed;
+    return [];
+  } catch (error) {
+    console.error("Gemini Essentials Error:", error);
+    return [];
+  }
+};
