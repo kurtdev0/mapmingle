@@ -26,18 +26,7 @@ export default defineConfig(({ mode }) => {
       },
       build: {
         outDir: 'dist',
-        sourcemap: false,
-        rollupOptions: {
-          output: {
-            manualChunks: {
-              vendor: ['react', 'react-dom', 'react-router-dom'],
-              supabase: ['@supabase/supabase-js'],
-              maps: ['leaflet', 'react-leaflet'],
-              charts: ['recharts'],
-              genai: ['@google/genai'],
-            }
-          }
-        }
+        sourcemap: false
       }
     };
 });
