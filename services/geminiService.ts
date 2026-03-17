@@ -9,10 +9,11 @@ if (!apiKey) {
 const ai = new GoogleGenAI({ apiKey: apiKey || 'dummy-key' });
 
 // Models
-const MAPS_MODEL = 'gemini-2.5-flash'; 
-const REASONING_MODEL = 'gemini-3-flash-preview'; 
+const MAPS_MODEL = 'gemini-1.5-flash'; 
+const REASONING_MODEL = 'gemini-1.5-flash'; 
 
 export const searchPlaces = async (query: string, location?: { lat: number; lng: number }): Promise<Place[]> => {
+  console.log("DEBUG: searchPlaces called", { query, hasKey: !!apiKey });
   try {
     const response = await ai.models.generateContent({
       model: REASONING_MODEL,
