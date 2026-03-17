@@ -14,9 +14,7 @@ const Guides: React.FC = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [selectedGuide, setSelectedGuide] = useState<GuideProfile | null>(null);
 
-  const [applyName, setApplyName] = useState('');
   const [applyExpertise, setApplyExpertise] = useState('');
-  const [applyReason, setApplyReason] = useState('');
   const [isApplying, setIsApplying] = useState(false);
 
   const loadGuides = async () => {
@@ -49,9 +47,6 @@ const Guides: React.FC = () => {
           alert(err.message || "Failed to apply for guide status");
       } finally {
           setIsApplying(false);
-          setApplyName('');
-          setApplyExpertise('');
-          setApplyReason('');
       }
   };
 
@@ -187,37 +182,23 @@ const Guides: React.FC = () => {
       <Modal isOpen={isBecomeGuideOpen} onClose={() => setIsBecomeGuideOpen(false)} title="Become a Local Guide">
         <form className="space-y-4" onSubmit={handleBecomeGuideSubmit}>
             <div>
-                <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Full Name</label>
-                <input 
-                    type="text" 
-                    value={applyName}
-                    onChange={(e) => setApplyName(e.target.value)}
-                    className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-medium text-gray-900 transition-all shadow-sm" 
-                    placeholder="Your Name" 
-                    required 
-                />
+                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                <input type="text" className="w-full border-gray-300 rounded-lg p-2 border focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="Your Name" required />
             </div>
             <div>
-                <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wider">City of Expertise</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">City of Expertise</label>
                 <input 
                     type="text" 
                     value={applyExpertise}
                     onChange={(e) => setApplyExpertise(e.target.value)}
-                    className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-medium text-gray-900 transition-all shadow-sm" 
+                    className="w-full border-gray-300 rounded-lg p-2 border focus:ring-2 focus:ring-indigo-500 focus:border-transparent" 
                     placeholder="e.g. Paris, Lyon (comma separated)" 
                     required 
                 />
             </div>
             <div>
-                <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Why should we verify you?</label>
-                <textarea 
-                    value={applyReason}
-                    onChange={(e) => setApplyReason(e.target.value)}
-                    className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 transition-all resize-none shadow-sm" 
-                    rows={3} 
-                    placeholder="Tell us about your local knowledge..." 
-                    required
-                ></textarea>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Why should we verify you?</label>
+                <textarea className="w-full border-gray-300 rounded-lg p-2 border focus:ring-2 focus:ring-indigo-500 focus:border-transparent" rows={3} placeholder="Tell us about your local knowledge..." required></textarea>
             </div>
             <button type="submit" disabled={isApplying} className="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl hover:bg-indigo-700 shadow-md disabled:opacity-50">
                 {isApplying ? 'Submitting...' : 'Submit Application'}
