@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { dbServices } from '../services/dbServices';
-import { Settings, MapPin, Grid, Bookmark, Users, Star, Camera, X, Heart, MessageCircle, Shield } from 'lucide-react';
+import { Settings, MapPin, Grid, Bookmark, Users, Star, Camera, X, Heart, MessageCircle, Shield, Package, CalendarDays, Clock, DollarSign, UserCheck, ChevronRight, Sparkles } from 'lucide-react';
 import PlaceCard from '../components/PlaceCard';
 import Modal from '../components/Modal';
 
@@ -42,7 +42,6 @@ const Profile: React.FC = () => {
           let targetProfile = currentSessionProfile;
           let isMe = true;
 
-          // If an ID is provided and it's not the current user, fetch that specific user
           if (id && (!currentSessionProfile || id !== currentSessionProfile.id)) {
               isMe = false;
               targetProfile = await dbServices.getProfileById(id);
@@ -51,7 +50,6 @@ const Profile: React.FC = () => {
           setProfile(targetProfile);
           setIsCurrentUser(isMe);
 
-          // Populate edit modal state
           if (isMe && targetProfile) {
               setEditName(targetProfile.name || '');
               setEditUsername(targetProfile.username || '');
@@ -59,13 +57,11 @@ const Profile: React.FC = () => {
               setEditExpertise(targetProfile.expertise ? targetProfile.expertise.join(', ') : '');
           }
 
-          // Fetch their posts
           if (targetProfile) {
               const posts = await dbServices.getUserPosts(targetProfile.id);
               setUserPosts(posts);
           }
 
-          // Fetch guide booking requests
           if (isMe && targetProfile?.is_guide) {
               const [requests, packages] = await Promise.all([
                  dbServices.getTourRequests().catch(() => []),
@@ -78,13 +74,11 @@ const Profile: React.FC = () => {
               setTourPackages(packages);
           }
 
-          // Fetch their saved places
-          if (targetProfile && isMe) { // only load saved places if it's me
+          if (targetProfile && isMe) {
               const places = await dbServices.getSavedPlaces();
               setSavedPlaces(places);
           } else {
-              setSavedPlaces([]); // We don't expose other users' saved places yet for privacy, or can we? 
-              // The user prompt didn't specify, let's just make it empty for other people for now.
+              setSavedPlaces([]);
           }
       } catch (err) {
           console.error("Failed to load profile data:", err);
@@ -146,15 +140,10 @@ const Profile: React.FC = () => {
       }
   };
 
-
-
   const handleRequestVerification = async () => {
       if (!isCurrentUser) return;
       try {
-          // Mock verification request, just update local state to show it's pending/verified
-          // In a real app this would submit a request to admin dashboard
           alert("Verification request submitted! We will review your profile shortly.");
-          // Optimistically update
           setProfile(prev => prev ? { ...prev, isVerified: true } : prev);
       } catch (err) {
           console.error("Failed to request verification", err);
@@ -162,150 +151,164 @@ const Profile: React.FC = () => {
   };
 
   if (loading) {
-      return <div className="text-center py-20 text-gray-500">Loading Profile...</div>;
+      return (
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+            <p className="text-gray-400 font-medium animate-pulse">Loading Profile...</p>
+          </div>
+        </div>
+      );
   }
 
   if (!profile) {
       return (
           <div className="max-w-2xl mx-auto px-4 py-20 text-center">
-              <div className="bg-indigo-50 text-indigo-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Users size={32} />
+              <div className="bg-gradient-to-br from-indigo-50 to-purple-50 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-5 rotate-3">
+                  <Users size={36} className="text-indigo-500" />
               </div>
-              <h2 className="text-2xl font-serif font-bold text-gray-900 mb-2">Not Logged In</h2>
-              <p className="text-gray-500">Please log in to view your profile and saved places.</p>
+              <h2 className="text-3xl font-bold text-gray-900 mb-3">Not Logged In</h2>
+              <p className="text-gray-500 text-lg">Please log in to view your profile and saved places.</p>
           </div>
       );
   }
 
+  const statItems = [
+    { label: 'Posts', value: userPosts.length, icon: Grid },
+    { label: 'Saved', value: savedPlaces.length, icon: Bookmark },
+    { label: 'Followers', value: 124, icon: UserCheck },
+    { label: 'Following', value: 89, icon: Users },
+  ];
+
+  const tabs = [
+    { key: 'saved' as const, label: 'Saved', icon: Bookmark, show: true },
+    { key: 'posts' as const, label: 'Posts', icon: Grid, show: true },
+    { key: 'packages' as const, label: 'Packages', icon: Package, show: profile.is_guide },
+    { key: 'requests' as const, label: 'Requests', icon: Users, show: profile.is_guide && isCurrentUser },
+  ];
+
   return (
-    <div className="max-w-5xl mx-auto px-4 py-10">
+    <div className="max-w-5xl mx-auto px-4 py-8">
       
-      {/* Profile Header */}
-      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 mb-8 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-r from-indigo-500 to-purple-600"></div>
-          
-          <div className="relative pt-16 flex flex-col md:flex-row gap-8 items-start md:items-center">
-              <div className="relative">
-                  <img 
-                      src={profile.avatar_url} 
-                      alt={profile.name} 
-                      className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg bg-gray-100"
-                  />
-                  {profile.is_guide && (
-                      <div className="absolute -bottom-2 right-2 bg-indigo-600 text-white text-[10px] font-bold px-2 py-1 rounded-full border-2 border-white shadow-sm flex items-center gap-1 uppercase tracking-wider">
-                          <Star size={10} className="fill-current" /> Guide
-                      </div>
+      {/* ═══════ PROFILE HEADER ═══════ */}
+      <div className="relative rounded-3xl overflow-hidden mb-8 shadow-xl shadow-indigo-100/50">
+        
+        {/* Cover gradient */}
+        <div className="h-44 md:h-52 bg-gradient-to-br from-indigo-600 via-purple-600 to-fuchsia-500 relative">
+          <div className="absolute inset-0 opacity-30" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.15\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' }}></div>
+          {/* Decorative blur circles */}
+          <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
+          <div className="absolute top-5 left-10 w-24 h-24 bg-white/10 rounded-full blur-xl"></div>
+        </div>
+        
+        {/* Profile card body */}
+        <div className="bg-white px-6 md:px-10 pb-8 pt-0 relative">
+
+          {/* Avatar row */}
+          <div className="flex flex-col md:flex-row gap-6 items-start md:items-end -mt-16 md:-mt-14 relative z-10">
+            
+            {/* Avatar */}
+            <div className="relative shrink-0 group">
+              <div className="w-28 h-28 md:w-32 md:h-32 rounded-2xl overflow-hidden border-4 border-white shadow-xl bg-gray-100 ring-4 ring-indigo-50">
+                <img 
+                    src={profile.avatar_url} 
+                    alt={profile.name} 
+                    className="w-full h-full object-cover"
+                />
+              </div>
+              {profile.is_guide && (
+                <div className="absolute -bottom-2 -right-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-[10px] font-black px-2.5 py-1 rounded-lg border-2 border-white shadow-lg flex items-center gap-1 uppercase tracking-wider">
+                  <Star size={10} className="fill-current" /> Guide
+                </div>
+              )}
+            </div>
+
+            {/* Name & actions */}
+            <div className="flex-1 flex flex-col md:flex-row md:items-center justify-between gap-4 w-full">
+              <div>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight">{profile.name}</h1>
+                  {profile.is_guide && <Shield className="text-indigo-600 fill-indigo-50" size={22} />}
+                  {profile.isVerified && (
+                    <span className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-3 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 shadow-sm">
+                      <Shield size={12} className="fill-current" /> Verified
+                    </span>
                   )}
+                </div>
+                {profile.username && (
+                  <p className="text-gray-400 font-medium mt-0.5">@{profile.username}</p>
+                )}
               </div>
 
-              <div className="flex-1">
-                  <div className="flex justify-between items-start mb-4">
-                      <div className="flex items-center gap-3">
-                          <h1 className="text-3xl font-serif font-bold text-gray-900">{profile.name}</h1>
-                          {profile.is_guide && <Shield className="text-indigo-600 fill-indigo-50" size={24} />}
-                          {profile.isVerified && (
-                              <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 border border-blue-100 shadow-sm">
-                                  <Shield size={14} className="fill-current" /> Verified
-                              </span>
-                          )}
-                      </div>
-                      {isCurrentUser ? (
-                          <div className="flex gap-2">
-                              {profile.is_guide && !profile.isVerified && (
-                                  <button onClick={handleRequestVerification} className="px-4 py-2 border border-blue-200 text-blue-600 bg-blue-50 rounded-xl font-bold flex gap-2 items-center hover:bg-blue-100 transition shadow-sm text-sm">
-                                      <Shield size={16} /> Request Verification
-                                  </button>
-                              )}
-                              <button onClick={() => setIsEditModalOpen(true)} className="px-4 py-2 border border-gray-200 rounded-xl font-bold flex gap-2 items-center hover:bg-gray-50 transition shadow-sm text-sm">
-                                  <Settings size={18} /> Edit Profile
-                              </button>
-                          </div>
-                      ) : null}
-                  </div>
-
-                  {profile.bio && (
-                      <p className="text-gray-700 mb-6 max-w-2xl leading-relaxed">{profile.bio}</p>
+              {isCurrentUser && (
+                <div className="flex gap-2 shrink-0">
+                  {profile.is_guide && !profile.isVerified && (
+                    <button onClick={handleRequestVerification} className="px-4 py-2.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl font-bold flex gap-2 items-center hover:shadow-lg hover:shadow-blue-200 transition-all text-sm">
+                      <Shield size={15} /> Get Verified
+                    </button>
                   )}
-
-                  {profile.is_guide && profile.expertise && profile.expertise.length > 0 && (
-                      <div className="mb-6 flex flex-wrap gap-2">
-                          {profile.expertise.map((area: string, i: number) => (
-                              <span key={i} className="bg-indigo-50 text-indigo-700 border border-indigo-100 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-                                  <MapPin size={10} /> {area}
-                              </span>
-                          ))}
-                      </div>
-                  )}
-
-                  <div className="flex flex-wrap gap-8 text-sm">
-                      <div className="flex flex-col">
-                          <span className="font-bold text-xl text-gray-900">{userPosts.length}</span>
-                          <span className="text-gray-500 font-medium">Posts</span>
-                      </div>
-                      <div className="flex flex-col">
-                          <span className="font-bold text-xl text-gray-900">{savedPlaces.length}</span>
-                          <span className="text-gray-500 font-medium">Saved</span>
-                      </div>
-                      <div className="flex flex-col">
-                          <span className="font-bold text-xl text-gray-900">124</span>
-                          <span className="text-gray-500 font-medium">Followers</span>
-                      </div>
-                      <div className="flex flex-col">
-                          <span className="font-bold text-xl text-gray-900">89</span>
-                          <span className="text-gray-500 font-medium">Following</span>
-                      </div>
-                  </div>
-              </div>
+                  <button onClick={() => setIsEditModalOpen(true)} className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 rounded-xl font-bold flex gap-2 items-center transition-all text-sm text-gray-700">
+                    <Settings size={16} /> Edit Profile
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* Bio */}
+          {profile.bio && (
+            <p className="text-gray-600 mt-5 max-w-2xl leading-relaxed text-[15px]">{profile.bio}</p>
+          )}
+
+          {/* Expertise tags */}
+          {profile.is_guide && profile.expertise && profile.expertise.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {profile.expertise.map((area: string, i: number) => (
+                <span key={i} className="bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-700 border border-indigo-100 px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 hover:shadow-sm transition-shadow">
+                  <MapPin size={11} className="text-indigo-400" /> {area}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Stats row */}
+          <div className="mt-6 pt-6 border-t border-gray-100 grid grid-cols-4 gap-4">
+            {statItems.map((stat, i) => (
+              <div key={i} className="text-center group cursor-default">
+                <div className="flex items-center justify-center gap-1.5 mb-1">
+                  <stat.icon size={14} className="text-gray-300 group-hover:text-indigo-400 transition-colors" />
+                  <span className="font-black text-xl text-gray-900 group-hover:text-indigo-600 transition-colors">{stat.value}</span>
+                </div>
+                <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">{stat.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-gray-200 mb-8 sticky top-20 bg-gray-50/80 backdrop-blur-md z-10 pt-2">
+      {/* ═══════ TABS ═══════ */}
+      <div className="flex gap-1.5 mb-8 bg-gray-100/80 p-1.5 rounded-2xl sticky top-20 z-10 backdrop-blur-md shadow-sm">
+        {tabs.filter(t => t.show).map(tab => (
           <button 
-              onClick={() => setActiveTab('saved')}
-              className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-4 font-bold text-sm transition-colors border-b-2 ${
-                  activeTab === 'saved' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-800'
-              }`}
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`flex-1 flex items-center justify-center gap-2 px-5 py-3 font-bold text-sm rounded-xl transition-all duration-200 ${
+              activeTab === tab.key 
+                ? 'bg-white text-indigo-600 shadow-md shadow-indigo-100/50' 
+                : 'text-gray-500 hover:text-gray-800 hover:bg-white/50'
+            }`}
           >
-              <Bookmark size={18} className={activeTab === 'saved' ? 'fill-current' : ''} /> 
-              Saved Places
+            <tab.icon size={16} className={activeTab === tab.key ? 'fill-indigo-100' : ''} /> 
+            {tab.label}
           </button>
-          <button 
-              onClick={() => setActiveTab('posts')}
-              className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-4 font-bold text-sm transition-colors border-b-2 ${
-                  activeTab === 'posts' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-800'
-              }`}
-          >
-              <Grid size={18} className={activeTab === 'posts' ? 'fill-current' : ''} /> 
-              My Posts
-          </button>
-          {profile.is_guide && (
-            <button 
-                onClick={() => setActiveTab('packages')}
-                className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-4 font-bold text-sm transition-colors border-b-2 ${
-                    activeTab === 'packages' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-800'
-                }`}
-            >
-                <Bookmark size={18} className={activeTab === 'packages' ? 'fill-current' : ''} /> 
-                Tour Packages
-            </button>
-          )}
-          {profile.is_guide && isCurrentUser && (
-            <button 
-                onClick={() => setActiveTab('requests')}
-                className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-4 font-bold text-sm transition-colors border-b-2 ${
-                    activeTab === 'requests' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-800'
-                }`}
-            >
-                <Users size={18} className={activeTab === 'requests' ? 'fill-current' : ''} /> 
-                Requests
-            </button>
-          )}
+        ))}
       </div>
 
-      {/* Tab Content */}
+      {/* ═══════ TAB CONTENT ═══════ */}
+
+      {/* ── Saved Places ── */}
       {activeTab === 'saved' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in">
               {savedPlaces.length > 0 ? (
                   savedPlaces.map(place => (
                       <PlaceCard 
@@ -322,110 +325,146 @@ const Profile: React.FC = () => {
                       />
                   ))
               ) : (
-                  <div className="col-span-full text-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm">
-                      <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <Bookmark size={24} className="text-gray-400" />
+                  <div className="col-span-full text-center py-20 bg-gradient-to-br from-white to-gray-50 rounded-3xl border border-gray-100 shadow-sm">
+                      <div className="bg-gradient-to-br from-indigo-50 to-purple-50 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 rotate-3">
+                          <Bookmark size={24} className="text-indigo-400" />
                       </div>
                       <h3 className="text-lg font-bold text-gray-900 mb-1">No Saved Places</h3>
-                      <p className="text-gray-500">When you save places on the map or feed, they'll appear here.</p>
+                      <p className="text-gray-500 max-w-xs mx-auto">When you save places on the map or feed, they'll appear here.</p>
                   </div>
               )}
           </div>
       )}
 
-
+      {/* ── Posts Grid ── */}
       {activeTab === 'posts' && (
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 md:gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5 animate-in">
               {userPosts.length > 0 ? (
-                  userPosts.map(post => (
-                      <div key={post.id} className="aspect-square bg-gray-100 relative group overflow-hidden rounded-2xl border border-gray-100 shadow-sm cursor-pointer">
-                          <img src={post.imageUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-6 text-white font-bold transition-opacity">
-                              <span className="flex items-center gap-2"><Heart size={22} className="fill-current"/> {post.likes}</span>
-                              <span className="flex items-center gap-2"><MessageCircle size={22} className="fill-current"/> {post.comments}</span>
+                  userPosts.map((post, idx) => (
+                      <div key={post.id} className="aspect-square bg-gray-100 relative group overflow-hidden rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer hover:-translate-y-1" style={{ animationDelay: `${idx * 50}ms` }}>
+                          <img src={post.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                          {/* Hover overlay */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300">
+                            <div className="absolute bottom-0 left-0 right-0 p-4 flex items-center justify-center gap-6 text-white">
+                              <span className="flex items-center gap-2 font-bold text-sm">
+                                <Heart size={18} className="fill-current drop-shadow-sm"/> {post.likes}
+                              </span>
+                              <span className="flex items-center gap-2 font-bold text-sm">
+                                <MessageCircle size={18} className="fill-current drop-shadow-sm"/> {post.comments}
+                              </span>
+                            </div>
+                          </div>
+                          {/* Post number badge */}
+                          <div className="absolute top-3 right-3 bg-black/30 backdrop-blur-sm text-white text-[10px] font-bold w-6 h-6 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            {idx + 1}
                           </div>
                       </div>
                   ))
               ) : (
-                  <div className="col-span-full text-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm">
-                      <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <Grid size={24} className="text-gray-400" />
+                  <div className="col-span-full text-center py-20 bg-gradient-to-br from-white to-gray-50 rounded-3xl border border-gray-100 shadow-sm">
+                      <div className="bg-gradient-to-br from-indigo-50 to-purple-50 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 -rotate-3">
+                          <Grid size={24} className="text-indigo-400" />
                       </div>
                       <h3 className="text-lg font-bold text-gray-900 mb-1">No Posts Yet</h3>
-                      <p className="text-gray-500">Photos shared with the community will show up on the profile.</p>
+                      <p className="text-gray-500 max-w-xs mx-auto">Photos shared with the community will show up on your profile.</p>
                   </div>
               )}
           </div>
       )}
 
+      {/* ── Tour Packages ── */}
       {activeTab === 'packages' && profile.is_guide && (
-          <div className="space-y-4 max-w-3xl mx-auto">
+          <div className="space-y-5 max-w-3xl mx-auto animate-in">
               {isCurrentUser && (
-                  <button onClick={() => setIsPackageModalOpen(true)} className="mb-4 bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 shadow-md">
-                      + Create New Tour Package
+                  <button onClick={() => setIsPackageModalOpen(true)} className="w-full py-4 rounded-2xl border-2 border-dashed border-indigo-200 text-indigo-600 font-bold hover:bg-indigo-50 hover:border-indigo-300 transition-all flex items-center justify-center gap-2 group">
+                      <Sparkles size={18} className="group-hover:rotate-12 transition-transform" /> Create New Tour Package
                   </button>
               )}
               {tourPackages.length > 0 ? (
-                  tourPackages.map(pkg => (
-                      <div key={pkg.id} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col sm:flex-row justify-between gap-4">
-                          <div>
-                              <h4 className="font-bold text-gray-900 text-lg mb-1">{pkg.title}</h4>
-                              <p className="text-gray-600 mb-3 text-sm">{pkg.description}</p>
-                              <div className="flex gap-4 text-xs font-bold text-gray-500">
-                                  <span className="bg-gray-50 px-3 py-1 rounded-full border border-gray-100">{pkg.duration_hours} Hours</span>
-                                  <span className="bg-gray-50 px-3 py-1 rounded-full border border-gray-100">Max {pkg.max_people} People</span>
+                  tourPackages.map((pkg, idx) => (
+                      <div key={pkg.id} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 flex flex-col sm:flex-row justify-between gap-5" style={{ animationDelay: `${idx * 80}ms` }}>
+                          <div className="flex-1">
+                              <h4 className="font-bold text-gray-900 text-lg mb-2 flex items-center gap-2">
+                                {pkg.title}
+                                <ChevronRight size={16} className="text-gray-300" />
+                              </h4>
+                              <p className="text-gray-500 mb-4 text-sm leading-relaxed">{pkg.description}</p>
+                              <div className="flex gap-3 flex-wrap">
+                                  <span className="bg-indigo-50 text-indigo-700 px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-indigo-100">
+                                    <Clock size={12} /> {pkg.duration_hours}h
+                                  </span>
+                                  <span className="bg-purple-50 text-purple-700 px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-purple-100">
+                                    <Users size={12} /> Max {pkg.max_people}
+                                  </span>
                               </div>
                           </div>
-                          <div className="text-right flex flex-col justify-between shrink-0">
-                               <span className="text-2xl font-black text-indigo-600">${pkg.price}</span>
+                          <div className="text-right flex flex-col justify-between shrink-0 items-end">
+                               <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-xl">
+                                 <span className="text-2xl font-black">${pkg.price}</span>
+                                 <span className="text-indigo-200 text-xs font-medium ml-1">/person</span>
+                               </div>
                                {!isCurrentUser && (
-                                   <button className="bg-green-600 text-white px-4 py-2 text-sm font-bold rounded-xl mt-2 hover:bg-green-700">Request Tour</button>
+                                   <button className="bg-gradient-to-r from-emerald-500 to-green-500 text-white px-5 py-2.5 text-sm font-bold rounded-xl mt-3 hover:shadow-lg hover:shadow-green-200 transition-all flex items-center gap-1.5">
+                                     <CalendarDays size={14} /> Book Tour
+                                   </button>
                                )}
                           </div>
                       </div>
                   ))
               ) : (
-                  <div className="text-center py-12 bg-white rounded-3xl border border-gray-100 shadow-sm">
-                      <p className="text-gray-500 font-medium">No tour packages created yet.</p>
+                  <div className="text-center py-16 bg-gradient-to-br from-white to-gray-50 rounded-3xl border border-gray-100 shadow-sm">
+                      <div className="bg-gradient-to-br from-indigo-50 to-purple-50 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                          <Package size={24} className="text-indigo-400" />
+                      </div>
+                      <h3 className="text-lg font-bold text-gray-900 mb-1">No tour packages yet</h3>
+                      <p className="text-gray-500">Create your first tour package to attract travelers.</p>
                   </div>
               )}
           </div>
       )}
 
+      {/* ── Booking Requests ── */}
       {activeTab === 'requests' && profile.is_guide && isCurrentUser && (
-          <div className="space-y-4 max-w-3xl mx-auto">
+          <div className="space-y-4 max-w-3xl mx-auto animate-in">
               {bookingRequests.length > 0 ? (
                   bookingRequests.map(req => (
-                      <div key={req.id} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex items-center justify-between">
+                      <div key={req.id} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                           <div className="flex items-center gap-4">
-                              <img src={req.user?.avatar_url || 'https://via.placeholder.com/150'} className="w-12 h-12 rounded-full object-cover bg-gray-100" />
+                              <div className="relative">
+                                <img src={req.user?.avatar_url || 'https://via.placeholder.com/150'} className="w-12 h-12 rounded-xl object-cover bg-gray-100 ring-2 ring-gray-50" />
+                                <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${req.status === 'pending' ? 'bg-amber-400' : req.status === 'accepted' ? 'bg-green-400' : 'bg-red-400'}`}></div>
+                              </div>
                               <div>
-                                  <h4 className="font-bold text-gray-900">{req.user?.name} <span className="text-gray-500 text-sm font-normal">@{req.user?.username}</span></h4>
-                                  <p className="text-sm text-gray-600 flex items-center gap-2 mt-1">
-                                      <span className="font-medium bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md">{req.package?.title}</span>
-                                      • Status: <span className="capitalize font-bold">{req.status}</span>
-                                  </p>
-                                  {req.message && <p className="text-sm text-gray-500 mt-2 italic bg-gray-50 p-2 rounded-lg">"{req.message}"</p>}
+                                  <h4 className="font-bold text-gray-900">{req.user?.name} <span className="text-gray-400 text-sm font-normal">@{req.user?.username}</span></h4>
+                                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                    <span className="font-medium bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-lg text-xs border border-indigo-100">{req.package?.title}</span>
+                                    <span className={`text-xs font-bold px-2.5 py-0.5 rounded-lg capitalize ${
+                                      req.status === 'pending' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
+                                      req.status === 'accepted' ? 'bg-green-50 text-green-700 border border-green-100' :
+                                      'bg-red-50 text-red-700 border border-red-100'
+                                    }`}>{req.status}</span>
+                                  </div>
+                                  {req.message && <p className="text-sm text-gray-500 mt-2 italic bg-gray-50 p-2.5 rounded-xl">"{req.message}"</p>}
                               </div>
                           </div>
                           {req.status === 'pending' && (
-                              <div className="flex gap-2">
+                              <div className="flex gap-2 shrink-0">
                                   <button onClick={async () => {
                                       await dbServices.updateTourRequestStatus(req.id, 'accepted');
                                       setBookingRequests(await dbServices.getTourRequests());
-                                  }} className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-indigo-700 transition">Accept</button>
+                                  }} className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:shadow-lg hover:shadow-indigo-200 transition-all">Accept</button>
                                   <button onClick={async () => {
                                       await dbServices.updateTourRequestStatus(req.id, 'rejected');
                                       setBookingRequests(await dbServices.getTourRequests());
-                                  }} className="bg-gray-100 text-gray-700 px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-200 transition">Decline</button>
+                                  }} className="bg-gray-100 text-gray-600 px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-gray-200 transition-all">Decline</button>
                               </div>
                           )}
                       </div>
                   ))
               ) : (
-                  <div className="text-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm">
-                      <div className="bg-indigo-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-indigo-400">
-                          <Users size={24} />
+                  <div className="text-center py-20 bg-gradient-to-br from-white to-gray-50 rounded-3xl border border-gray-100 shadow-sm">
+                      <div className="bg-gradient-to-br from-indigo-50 to-purple-50 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                          <Users size={24} className="text-indigo-400" />
                       </div>
                       <h3 className="text-lg font-bold text-gray-900 mb-1">No Booking Requests</h3>
                       <p className="text-gray-500">When travelers request tours with you, they'll appear here.</p>
@@ -434,28 +473,28 @@ const Profile: React.FC = () => {
           </div>
       )}
 
-      {/* Edit Profile Modal */}
+      {/* ═══════ EDIT PROFILE MODAL ═══════ */}
       <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit Profile">
-          <form onSubmit={handleEditSubmit} className="flex flex-col gap-4">
+          <form onSubmit={handleEditSubmit} className="flex flex-col gap-5">
               
               <div className="flex flex-col items-center mb-2 relative">
-                  <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-100 border-4 border-white shadow-sm relative group cursor-pointer">
+                  <div className="w-24 h-24 rounded-2xl overflow-hidden bg-gray-100 border-4 border-white shadow-lg relative group cursor-pointer ring-4 ring-indigo-50">
                       <img src={editAvatarPreview || profile.avatar_url || 'https://via.placeholder.com/150'} className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-black/40 hidden group-hover:flex items-center justify-center transition-colors">
+                      <div className="absolute inset-0 bg-black/40 hidden group-hover:flex items-center justify-center transition-colors rounded-2xl">
                           <Camera className="text-white" size={24} />
                       </div>
                       <input type="file" accept="image/*" onChange={handleAvatarChange} className="absolute inset-0 opacity-0 cursor-pointer" />
                   </div>
-                  <span className="text-xs text-indigo-600 font-bold mt-2">Change Photo</span>
+                  <span className="text-xs text-indigo-600 font-bold mt-2.5 hover:text-indigo-800 cursor-pointer">Change Photo</span>
               </div>
 
               <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Name</label>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Name</label>
                   <input 
                       type="text" 
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-medium transition-all"
                       required
                       minLength={2}
                       maxLength={50}
@@ -463,14 +502,14 @@ const Profile: React.FC = () => {
               </div>
 
               <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Username</label>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Username</label>
                   <div className="relative">
-                      <span className="absolute left-4 top-2.5 text-gray-400 font-bold">@</span>
+                      <span className="absolute left-4 top-3 text-gray-400 font-bold text-sm">@</span>
                       <input 
                           type="text" 
                           value={editUsername}
                           onChange={(e) => setEditUsername(e.target.value)}
-                          className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-8 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium lowercase"
+                          className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-medium lowercase transition-all"
                           required
                           minLength={3}
                           maxLength={30}
@@ -481,25 +520,27 @@ const Profile: React.FC = () => {
               </div>
 
               <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Bio</label>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Bio</label>
                   <textarea 
                       value={editBio}
                       onChange={(e) => setEditBio(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-none"
                       rows={3}
                       maxLength={500}
+                      placeholder="Tell travelers about yourself..."
                   ></textarea>
+                  <p className="text-right text-[11px] text-gray-400 mt-1">{editBio.length}/500</p>
               </div>
 
               {profile?.is_guide && (
                   <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-1">Expertise Regions</label>
+                      <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Expertise Regions</label>
                       <input 
                           type="text" 
                           value={editExpertise}
                           onChange={(e) => setEditExpertise(e.target.value)}
                           placeholder="e.g. Rome, Colosseum, Vatican (comma separated)"
-                          className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                          className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-medium transition-all"
                       />
                   </div>
               )}
@@ -507,39 +548,39 @@ const Profile: React.FC = () => {
               <button 
                   type="submit" 
                   disabled={isSaving}
-                  className="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 disabled:opacity-50 mt-2"
+                  className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold py-3.5 rounded-xl hover:shadow-lg hover:shadow-indigo-200 transition-all disabled:opacity-50 mt-1"
               >
                   {isSaving ? 'Saving...' : 'Save Profile'}
               </button>
           </form>
       </Modal>
 
-      {/* Package Creation Modal */}
+      {/* ═══════ PACKAGE CREATION MODAL ═══════ */}
       <Modal isOpen={isPackageModalOpen} onClose={() => setIsPackageModalOpen(false)} title="Create Tour Package">
-          <form onSubmit={handleCreatePackage} className="flex flex-col gap-4">
+          <form onSubmit={handleCreatePackage} className="flex flex-col gap-5">
               <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Package Title</label>
-                  <input type="text" required minLength={5} maxLength={100} value={newPackage.title} onChange={e => setNewPackage({...newPackage, title: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-indigo-500" placeholder="e.g. Hidden Trastevere Food Tour"/>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Package Title</label>
+                  <input type="text" required minLength={5} maxLength={100} value={newPackage.title} onChange={e => setNewPackage({...newPackage, title: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all font-medium" placeholder="e.g. Hidden Trastevere Food Tour"/>
               </div>
               <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Description</label>
-                  <textarea required minLength={10} maxLength={1000} value={newPackage.description} onChange={e => setNewPackage({...newPackage, description: e.target.value})} rows={3} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-indigo-500" placeholder="Describe the tour..."></textarea>
+                  <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Description</label>
+                  <textarea required minLength={10} maxLength={1000} value={newPackage.description} onChange={e => setNewPackage({...newPackage, description: e.target.value})} rows={3} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all resize-none" placeholder="Describe the tour experience..."></textarea>
               </div>
               <div className="grid grid-cols-3 gap-4">
                   <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-1">Price ($)</label>
-                      <input type="number" required min="0" value={newPackage.price} onChange={e => setNewPackage({...newPackage, price: Number(e.target.value)})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-indigo-500" />
+                      <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wider flex items-center gap-1"><DollarSign size={11} /> Price</label>
+                      <input type="number" required min="0" value={newPackage.price} onChange={e => setNewPackage({...newPackage, price: Number(e.target.value)})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all font-bold" />
                   </div>
                   <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-1">Duration (Hrs)</label>
-                      <input type="number" required min="0.5" step="0.5" value={newPackage.durationHours} onChange={e => setNewPackage({...newPackage, durationHours: Number(e.target.value)})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-indigo-500" />
+                      <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wider flex items-center gap-1"><Clock size={11} /> Duration</label>
+                      <input type="number" required min="0.5" step="0.5" value={newPackage.durationHours} onChange={e => setNewPackage({...newPackage, durationHours: Number(e.target.value)})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all font-bold" />
                   </div>
                   <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-1">Max People</label>
-                      <input type="number" required min="1" value={newPackage.maxPeople} onChange={e => setNewPackage({...newPackage, maxPeople: Number(e.target.value)})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 focus:ring-2 focus:ring-indigo-500" />
+                      <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wider flex items-center gap-1"><Users size={11} /> People</label>
+                      <input type="number" required min="1" value={newPackage.maxPeople} onChange={e => setNewPackage({...newPackage, maxPeople: Number(e.target.value)})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all font-bold" />
                   </div>
               </div>
-              <button type="submit" disabled={isSaving} className="w-full bg-green-600 text-white font-bold py-3.5 rounded-xl hover:bg-green-700 transition-colors shadow-lg disabled:opacity-50 mt-2">
+              <button type="submit" disabled={isSaving} className="w-full bg-gradient-to-r from-emerald-500 to-green-500 text-white font-bold py-3.5 rounded-xl hover:shadow-lg hover:shadow-green-200 transition-all disabled:opacity-50 mt-1">
                   {isSaving ? 'Creating...' : 'Create Package'}
               </button>
           </form>
