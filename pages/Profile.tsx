@@ -494,7 +494,7 @@ const Profile: React.FC = () => {
                       type="text" 
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-medium transition-all"
+                      className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-medium text-gray-900 transition-all shadow-sm"
                       required
                       minLength={2}
                       maxLength={50}
@@ -509,7 +509,7 @@ const Profile: React.FC = () => {
                           type="text" 
                           value={editUsername}
                           onChange={(e) => setEditUsername(e.target.value)}
-                          className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-medium lowercase transition-all"
+                          className="w-full bg-white border border-gray-300 rounded-xl pl-9 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-medium text-gray-900 lowercase transition-all shadow-sm"
                           required
                           minLength={3}
                           maxLength={30}
@@ -524,7 +524,7 @@ const Profile: React.FC = () => {
                   <textarea 
                       value={editBio}
                       onChange={(e) => setEditBio(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-none"
+                      className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900 transition-all resize-none shadow-sm"
                       rows={3}
                       maxLength={500}
                       placeholder="Tell travelers about yourself..."
@@ -540,7 +540,7 @@ const Profile: React.FC = () => {
                           value={editExpertise}
                           onChange={(e) => setEditExpertise(e.target.value)}
                           placeholder="e.g. Rome, Colosseum, Vatican (comma separated)"
-                          className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-medium transition-all"
+                          className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-medium text-gray-900 transition-all shadow-sm"
                       />
                   </div>
               )}
@@ -560,24 +560,24 @@ const Profile: React.FC = () => {
           <form onSubmit={handleCreatePackage} className="flex flex-col gap-5">
               <div>
                   <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Package Title</label>
-                  <input type="text" required minLength={5} maxLength={100} value={newPackage.title} onChange={e => setNewPackage({...newPackage, title: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all font-medium" placeholder="e.g. Hidden Trastevere Food Tour"/>
+                  <input type="text" required minLength={5} maxLength={100} value={newPackage.title} onChange={e => setNewPackage({...newPackage, title: e.target.value})} className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all font-medium text-gray-900 shadow-sm" placeholder="e.g. Hidden Trastevere Food Tour"/>
               </div>
               <div>
                   <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Description</label>
-                  <textarea required minLength={10} maxLength={1000} value={newPackage.description} onChange={e => setNewPackage({...newPackage, description: e.target.value})} rows={3} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all resize-none" placeholder="Describe the tour experience..."></textarea>
+                  <textarea required minLength={10} maxLength={1000} value={newPackage.description} onChange={e => setNewPackage({...newPackage, description: e.target.value})} rows={3} className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all resize-none text-gray-900 shadow-sm" placeholder="Describe the tour experience..."></textarea>
               </div>
               <div className="grid grid-cols-3 gap-4">
                   <div>
                       <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wider flex items-center gap-1"><DollarSign size={11} /> Price</label>
-                      <input type="number" required min="0" value={newPackage.price} onChange={e => setNewPackage({...newPackage, price: Number(e.target.value)})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all font-bold" />
+                      <input type="number" required min="0" value={newPackage.price} onChange={e => setNewPackage({...newPackage, price: Number(e.target.value)})} className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all font-bold text-gray-900 shadow-sm" />
                   </div>
                   <div>
                       <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wider flex items-center gap-1"><Clock size={11} /> Duration</label>
-                      <input type="number" required min="0.5" step="0.5" value={newPackage.durationHours} onChange={e => setNewPackage({...newPackage, durationHours: Number(e.target.value)})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all font-bold" />
+                      <input type="number" required min="0.5" step="0.5" value={newPackage.durationHours} onChange={e => setNewPackage({...newPackage, durationHours: Number(e.target.value)})} className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all font-bold text-gray-900 shadow-sm" />
                   </div>
                   <div>
                       <label className="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wider flex items-center gap-1"><Users size={11} /> People</label>
-                      <input type="number" required min="1" value={newPackage.maxPeople} onChange={e => setNewPackage({...newPackage, maxPeople: Number(e.target.value)})} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all font-bold" />
+                      <input type="number" required min="1" value={newPackage.maxPeople} onChange={e => setNewPackage({...newPackage, maxPeople: Number(e.target.value)})} className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all font-bold text-gray-900 shadow-sm" />
                   </div>
               </div>
               <button type="submit" disabled={isSaving} className="w-full bg-gradient-to-r from-emerald-500 to-green-500 text-white font-bold py-3.5 rounded-xl hover:shadow-lg hover:shadow-green-200 transition-all disabled:opacity-50 mt-1">
