@@ -1,7 +1,12 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { ExaggerationResult, ItineraryDay, Place, WaterSafetyInfo } from '../types';
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY || '';
+if (!apiKey) {
+    console.warn("⚠️ GEMINI_API_KEY is missing. AI features will be disabled.");
+}
+
+const ai = new GoogleGenAI({ apiKey: apiKey || 'dummy-key' });
 
 // Models
 const MAPS_MODEL = 'gemini-2.5-flash'; 
