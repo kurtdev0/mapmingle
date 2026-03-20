@@ -22,22 +22,22 @@ I built MapMingle because I was tired of generic travel guides sending everyone 
 
 MapMingle is a dynamic travel companion that fuses the utility of Google Maps with community-driven insights and Google's Gemini AI. It's designed with a premium, glassmorphic UI specifically for modern travelers and local guides who want authentic experiences.
 
-## ✨ Key Features
+##  Key Features
 
-- **🗺️ Interactive Itinerary Planner**: Tell the AI where you're going and for how many days. It builds a connected, map-routed itinerary of "must-see" and "must-eat" spots tailored to the location.
-- **💎 Hidden Gems Feed**: A social feed where locals drop pins and share gorgeous locations that aren't on the typical tourist radar.
-- **🛡️ Verified Guides System**: Local experts can verify their profiles (shield badge), offer custom tour packages, and receive direct booking requests.
-- **💧 Essentials Locator**: You're walking around Rome and need a drink or a bathroom. The app uses AI to instantly map real public water fountains and restrooms near your exact coordinates. 
-- **⚖️ The "Truth Scale"**: Wondering if that viral Instagram spot is actually worth it? The Truth Scale analyzes wait times, crowds, and value-for-money to generate a brutally honest "exaggeration score."
+- ** Interactive Itinerary Planner**: Tell the AI where you're going and for how many days. It builds a connected, map-routed itinerary of "must-see" and "must-eat" spots tailored to the location.
+- ** Hidden Gems Feed**: A social feed where locals drop pins and share gorgeous locations that aren't on the typical tourist radar.
+- ** Verified Guides System**: Local experts can verify their profiles (shield badge), offer custom tour packages, and receive direct booking requests.
+- ** Essentials Locator**: You're walking around Rome and need a drink or a bathroom. The app uses AI to instantly map real public water fountains and restrooms near your exact coordinates. 
+- ** The "Truth Scale"**: Wondering if that viral Instagram spot is actually worth it? The Truth Scale analyzes wait times, crowds, and value-for-money to generate a brutally honest "exaggeration score."
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 - **Frontend**: React 19, Vite, React Router, Tailwind CSS v4 
 - **Maps**: Leaflet & React-Leaflet
 - **Backend/Auth**: Supabase (PostgreSQL, Authentication, Storage)
 - **AI Integration**: Google GenAI SDK (`gemini-2.5-flash` & `gemini-3-flash-preview`)
 
-## 🚀 Running it locally
+##  Running it locally
 
 If you want to spin this up on your own machine, it's pretty straightforward.
 
@@ -65,8 +65,4 @@ If you want to spin this up on your own machine, it's pretty straightforward.
    npm run dev
    ```
 
-## 🤝 Contributing
-Found a bug? Have an idea for a cool new feature? Feel free to open an issue or throw a pull request my way.
 
-## 📄 License
-MIT License - feel free to use this for your own projects!
