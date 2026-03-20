@@ -24,11 +24,11 @@ MapMingle is a dynamic travel companion that fuses the utility of Google Maps wi
 
 ##  Key Features
 
-- ** Interactive Itinerary Planner**: Tell the AI where you're going and for how many days. It builds a connected, map-routed itinerary of "must-see" and "must-eat" spots tailored to the location.
-- ** Hidden Gems Feed**: A social feed where locals drop pins and share gorgeous locations that aren't on the typical tourist radar.
-- ** Verified Guides System**: Local experts can verify their profiles (shield badge), offer custom tour packages, and receive direct booking requests.
-- ** Essentials Locator**: You're walking around Rome and need a drink or a bathroom. The app uses AI to instantly map real public water fountains and restrooms near your exact coordinates. 
-- ** The "Truth Scale"**: Wondering if that viral Instagram spot is actually worth it? The Truth Scale analyzes wait times, crowds, and value-for-money to generate a brutally honest "exaggeration score."
+- **Interactive Itinerary Planner**: Tell the AI where you're going and for how many days. It builds a connected, map-routed itinerary of "must-see" and "must-eat" spots tailored to the location.
+- **Hidden Gems Feed**: A social feed where locals drop pins and share gorgeous locations that aren't on the typical tourist radar.
+- **Verified Guides System**: Local experts can verify their profiles (shield badge), offer custom tour packages, and receive direct booking requests.
+- **Essentials Locator**: You're walking around Rome and need a drink or a bathroom. The app uses AI to instantly map real public water fountains and restrooms near your exact coordinates. 
+- **The "Truth Scale"**: Wondering if that viral Instagram spot is actually worth it? The Truth Scale analyzes wait times, crowds, and value-for-money to generate a brutally honest "exaggeration score."
 
 ##  Tech Stack
 
