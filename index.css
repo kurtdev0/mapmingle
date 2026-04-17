@@ -1,13 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
 @import "tailwindcss";
 
 /* ── Base Styles ── */
-body {
-  font-family: 'Inter', sans-serif;
-}
-
-h1, h2, h3, h4, .font-serif {
-  font-family: 'Playfair Display', serif;
+body, h1, h2, h3, h4, h5, h6 {
+  font-family: 'DM Sans', sans-serif;
 }
 
 /* ── Custom Scrollbar ── */
@@ -45,4 +41,31 @@ h1, h2, h3, h4, .font-serif {
 
 .animate-in {
   animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96) translateY(6px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);   }
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+.animate-slide-down {
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.animate-overlay-in {
+  animation: overlayIn 0.2s ease-out;
 }

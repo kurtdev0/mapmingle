@@ -142,7 +142,7 @@ const GuideDetails: React.FC = () => {
 
             <div>
                 <div className="flex items-center gap-3 mb-1">
-                    <h1 className="text-3xl font-serif font-bold text-gray-900">{guide.name}</h1>
+                    <h1 className="text-3xl font-bold text-gray-900">{guide.name}</h1>
                     <Shield className="text-indigo-600 fill-indigo-50" size={24} />
                     {guide.isVerified && (
                         <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 border border-blue-100 shadow-sm ml-2">

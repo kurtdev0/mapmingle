@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { HashRouter as Router, Routes, Route } from 'react-router-dom';
+import React from 'react';
+import { HashRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { Compass, Map, Users, Calendar, Droplet, Target, Layout } from 'lucide-react';
 import Navigation from './components/Navigation';
 import Home from './pages/Home';
 import Feed from './pages/Feed';
@@ -8,14 +9,23 @@ import GuideDetails from './pages/GuideDetails';
 import Essentials from './pages/Essentials';
 import Planner from './pages/Planner';
 import Exaggeration from './pages/Exaggeration';
-import Profile from './pages/Profile'; // Added import
-import DiscoverMap from './pages/DiscoverMap'; // Added import
+import Profile from './pages/Profile';
+import DiscoverMap from './pages/DiscoverMap';
+import About from './pages/About';
+import Privacy from './pages/Privacy';
+import Terms from './pages/Terms';
 
-import Modal from './components/Modal';
+const footerNav = [
+  { name: 'Feed',         path: '/feed',        icon: Layout  },
+  { name: 'Discover',     path: '/discover',    icon: Map     },
+  { name: 'Hidden Gems',  path: '/',            icon: Compass },
+  { name: 'Guides',       path: '/guides',      icon: Users   },
+  { name: 'Essentials',   path: '/essentials',  icon: Droplet },
+  { name: 'Planner',      path: '/planner',     icon: Calendar},
+  { name: 'Truth Scale',  path: '/exaggeration',icon: Target  },
+];
 
 function App() {
-  const [modalContent, setModalContent] = useState<{title: string, content: React.ReactNode} | null>(null);
-
   return (
     <Router>
       <div className="min-h-screen bg-white flex flex-col font-sans">
@@ -32,27 +42,72 @@ function App() {
             <Route path="/essentials" element={<Essentials />} />
             <Route path="/planner" element={<Planner />} />
             <Route path="/exaggeration" element={<Exaggeration />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
           </Routes>
         </main>
-        <footer className="bg-white border-t border-gray-100 py-10 mt-12">
-            <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center text-gray-400 text-sm">
-                <span className="font-serif text-lg font-bold text-gray-900 mb-4 md:mb-0">MapMingle</span>
-                <div className="flex gap-6">
-                    <button onClick={() => setModalContent({ title: 'Privacy Policy', content: <p>MapMingle values your privacy. We store minimal data necessary to provide personalized travel recommendations. We do not sell your data to third parties.</p> })} className="hover:text-indigo-600 transition-colors">Privacy</button>
-                    <button onClick={() => setModalContent({ title: 'Terms of Service', content: <p>By using MapMingle, you agree to rely on our AI-generated recommendations at your own risk. Always verify critical travel information locally.</p> })} className="hover:text-indigo-600 transition-colors">Terms</button>
-                    <button onClick={() => setModalContent({ title: 'About Us', content: <p>MapMingle is built for modern travelers and local guides who want to discover the undiscovered and avoid tourist traps.</p> })} className="hover:text-indigo-600 transition-colors">About</button>
-                </div>
-                <div className="mt-4 md:mt-0">
-                    &copy; {new Date().getFullYear()} MapMingle.
-                </div>
-            </div>
-        </footer>
 
-        <Modal isOpen={!!modalContent} onClose={() => setModalContent(null)} title={modalContent?.title || ''}>
-          <div className="text-gray-600">
-             {modalContent?.content}
+        <footer className="bg-gray-950 text-white mt-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-10 pb-10 border-b border-white/10">
+
+              {/* Brand */}
+              <div>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="bg-indigo-600 p-2 rounded-xl shadow-lg shadow-indigo-600/30">
+                    <Compass className="h-5 w-5 text-white" />
+                  </div>
+                  <span className="text-xl font-bold tracking-tight">MapMingle</span>
+                </div>
+                <p className="text-gray-400 text-sm leading-relaxed max-w-xs">
+                  Discover the undiscovered. Escape tourist traps and find hidden gems, secret spots, and local favorites that guidebooks miss.
+                </p>
+              </div>
+
+              {/* Explore links */}
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">Explore</h4>
+                <ul className="space-y-2.5">
+                  {footerNav.map(({ name, path, icon: Icon }) => (
+                    <li key={path}>
+                      <Link to={path} className="flex items-center gap-2.5 text-gray-400 hover:text-white transition-colors text-sm font-medium group">
+                        <Icon size={14} className="text-gray-600 group-hover:text-indigo-400 transition-colors" />
+                        {name}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Company links */}
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">Company</h4>
+                <ul className="space-y-2.5">
+                  <li>
+                    <Link to="/about" className="text-gray-400 hover:text-white transition-colors text-sm font-medium">
+                      About
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/privacy" className="text-gray-400 hover:text-white transition-colors text-sm font-medium">
+                      Privacy Policy
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/terms" className="text-gray-400 hover:text-white transition-colors text-sm font-medium">
+                      Terms of Service
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+              <p className="text-gray-600 text-sm">&copy; {new Date().getFullYear()} MapMingle. All rights reserved.</p>
+            </div>
           </div>
-        </Modal>
+        </footer>
       </div>
     </Router>
   );

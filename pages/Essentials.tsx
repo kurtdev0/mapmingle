@@ -271,7 +271,7 @@ const Essentials: React.FC = () => {
       {/* Side Panel */}
       <div className="w-full md:w-[400px] h-full bg-white shadow-2xl z-[1000] flex flex-col border-r border-gray-100">
           <div className="p-6 border-b border-gray-100 bg-gray-50/50">
-              <h1 className="text-3xl font-serif font-bold text-gray-900 mb-2">Essentials</h1>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Essentials</h1>
               <p className="text-gray-500 text-sm mb-6">Locate clean water sources and public restrooms contributed by travelers.</p>
               
               <div className="flex bg-gray-100 p-1 rounded-xl mb-6">

@@ -3,12 +3,12 @@ import { UserProfile, ExaggerationMetrics, EssentialsLocation, Place, GuideProfi
 
 export const dbServices = {
   // --- AUTHENTICATION ---
-  async signUp(email: string, password: string, fullName: string) {
+  async signUp(email: string, password: string, fullName: string, username: string) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name: fullName } // Sent to SQL trigger
+        data: { full_name: fullName, username } // Sent to SQL trigger
       }
     });
     if (error) throw error;

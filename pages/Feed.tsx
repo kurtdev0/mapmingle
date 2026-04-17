@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FeedPost } from '../types';
-import { Heart, MessageCircle, Share2, MapPin, MoreHorizontal, Upload, X, Camera, Trash2, UserMinus, BadgeCheck } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MapPin, MoreHorizontal, X, Camera, Trash2, UserMinus, BadgeCheck, Map, ImagePlus } from 'lucide-react';
 import { dbServices } from '../services/dbServices';
 
 import Modal from '../components/Modal';
@@ -19,6 +19,7 @@ const Feed: React.FC = () => {
   const [newPostLocation, setNewPostLocation] = useState('');
   const [newPostCoords, setNewPostCoords] = useState<{lat: number, lng: number} | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [showMapPicker, setShowMapPicker] = useState(false);
   
   // Comments specific state
   const [comments, setComments] = useState<any[]>([]);
@@ -191,6 +192,7 @@ const Feed: React.FC = () => {
           setNewPostCaption('');
           setNewPostLocation('');
           setNewPostCoords(null);
+          setShowMapPicker(false);
           setActiveModal(null);
       } catch (err: any) {
           console.error("Failed to create post:", err);
@@ -200,20 +202,48 @@ const Feed: React.FC = () => {
       }
   };
 
-  if (loading) return <div className="text-center py-20">Loading Feed...</div>;
+  if (loading) return (
+    <div className="max-w-2xl mx-auto px-4 py-8 space-y-10">
+      {[1, 2, 3].map(i => (
+        <div key={i} className="bg-white rounded-[2rem] border border-gray-100 overflow-hidden">
+          <div className="p-5 flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-gray-100 animate-pulse shrink-0"></div>
+            <div className="flex-1 space-y-2">
+              <div className="h-3.5 bg-gray-100 rounded-full w-32 animate-pulse"></div>
+              <div className="h-3 bg-gray-100 rounded-full w-20 animate-pulse"></div>
+            </div>
+          </div>
+          <div className="aspect-square bg-gray-100 animate-pulse"></div>
+          <div className="p-5 space-y-3">
+            <div className="h-3 bg-gray-100 rounded-full w-24 animate-pulse"></div>
+            <div className="h-3.5 bg-gray-100 rounded-full w-full animate-pulse"></div>
+            <div className="h-3.5 bg-gray-100 rounded-full w-3/4 animate-pulse"></div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
-      {/* Create Post Button */}
-      <div className="mb-8">
-          <button 
+      {/* Create Post trigger */}
+      <div className="mb-8 bg-white rounded-2xl border border-gray-100 shadow-sm p-3 flex items-center gap-3">
+          {currentProfile ? (
+              <img src={currentProfile.avatar_url} alt={currentProfile.name} className="w-10 h-10 rounded-full object-cover shrink-0 border border-gray-100" />
+          ) : (
+              <div className="w-10 h-10 rounded-full bg-gray-100 shrink-0" />
+          )}
+          <button
               onClick={() => setActiveModal({ type: 'create' })}
-              className="w-full bg-white rounded-3xl shadow-sm border border-gray-100 p-4 flex items-center justify-center gap-3 text-gray-500 hover:bg-gray-50 transition-colors font-medium group"
+              className="flex-1 text-left text-gray-400 bg-gray-50 hover:bg-gray-100 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors"
           >
-              <div className="bg-indigo-50 text-indigo-600 p-3 rounded-full group-hover:bg-indigo-100 transition-colors">
-                  <Camera size={24} />
-              </div>
-              <span className="text-lg">Share your latest adventure...</span>
+              Share your latest adventure...
+          </button>
+          <button
+              onClick={() => setActiveModal({ type: 'create' })}
+              className="shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white p-2.5 rounded-xl transition-colors"
+          >
+              <ImagePlus size={18} />
           </button>
       </div>
 
@@ -377,81 +407,106 @@ const Feed: React.FC = () => {
          </div>
       </Modal>
 
-      <Modal isOpen={activeModal?.type === 'create'} onClose={() => setActiveModal(null)} title="Create New Post">
-         <form onSubmit={handleCreatePost} className="flex flex-col gap-4">
-             {!newPostPreview ? (
-                 <div className="w-full h-48 border-2 border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer relative">
-                    <input 
-                        type="file" 
-                        accept="image/*" 
-                        onChange={handleImageChange}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                        required
-                    />
-                    <Upload size={32} className="text-gray-400 mb-2" />
-                    <p className="text-sm font-medium text-gray-600">Click or drag a photo to upload</p>
-                 </div>
-             ) : (
-                 <div className="relative w-full aspect-square md:aspect-video rounded-2xl overflow-hidden bg-gray-100">
-                     <img src={newPostPreview} alt="Preview" className="w-full h-full object-contain" />
-                     <button 
-                         type="button" 
-                         onClick={() => { setNewPostPreview(''); setNewPostImage(null); }}
-                         className="absolute top-2 right-2 bg-gray-900/50 p-1.5 text-white rounded-full hover:bg-gray-900 transition-colors"
-                     >
-                         <X size={20} />
-                     </button>
-                 </div>
-             )}
+      <Modal isOpen={activeModal?.type === 'create'} onClose={() => { setActiveModal(null); setShowMapPicker(false); }} title="New Post">
+        <form onSubmit={handleCreatePost} className="flex flex-col gap-4">
 
-              <div>
-                 <label className="block text-sm font-bold text-gray-700 mb-1">Location</label>
-                 <div className="relative mb-3">
-                    <MapPin size={16} className="absolute left-3 top-3 text-gray-400" />
-                    <input 
-                        type="text" 
-                        placeholder="e.g. Trastevere, Rome" 
-                        value={newPostLocation}
-                        onChange={(e) => setNewPostLocation(e.target.value)}
-                        className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium"
-                        required
-                        minLength={2}
-                        maxLength={100}
-                    />
-                 </div>
-                 <div className="text-xs text-gray-500 font-bold mb-2 uppercase tracking-wide">Precise Map Location (Optional)</div>
-                 <LocationPicker 
-                     onLocationSelect={(lat, lng) => setNewPostCoords({lat, lng})} 
-                 />
-                 {newPostCoords && (
-                     <div className="text-xs text-green-600 mt-2 font-medium flex items-center gap-1">
-                         <BadgeCheck size={14} /> Coordinates saved: {newPostCoords.lat.toFixed(4)}, {newPostCoords.lng.toFixed(4)}
-                     </div>
-                 )}
+          {/* Image area */}
+          <div className="relative rounded-2xl overflow-hidden bg-gray-50 h-52">
+            {!newPostPreview ? (
+              <label className="absolute inset-0 flex flex-col items-center justify-center gap-3 cursor-pointer group">
+                <input type="file" accept="image/*" onChange={handleImageChange} className="sr-only" required />
+                <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-sm group-hover:shadow-md transition-all">
+                  <Camera size={26} className="text-gray-300 group-hover:text-indigo-500 transition-colors" />
+                </div>
+                <div className="text-center">
+                  <p className="font-semibold text-gray-600 text-sm">Tap to upload a photo</p>
+                  <p className="text-xs text-gray-400 mt-0.5">JPG, PNG, WEBP</p>
+                </div>
+              </label>
+            ) : (
+              <>
+                <img src={newPostPreview} alt="Preview" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
+                {/* Remove button */}
+                <button
+                  type="button"
+                  onClick={() => { setNewPostPreview(''); setNewPostImage(null); }}
+                  className="absolute top-3 right-3 bg-black/50 backdrop-blur-sm text-white p-1.5 rounded-full hover:bg-black/70 transition-colors"
+                >
+                  <X size={15} />
+                </button>
+                {/* Change photo */}
+                <label className="absolute bottom-3 left-3 bg-black/50 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-xs font-semibold cursor-pointer hover:bg-black/70 transition-colors flex items-center gap-1.5">
+                  <Camera size={12} /> Change photo
+                  <input type="file" accept="image/*" onChange={handleImageChange} className="sr-only" />
+                </label>
+              </>
+            )}
+          </div>
+
+          {/* Caption */}
+          <div>
+            <textarea
+              placeholder="Write a caption..."
+              rows={3}
+              value={newPostCaption}
+              onChange={(e) => setNewPostCaption(e.target.value)}
+              className="w-full bg-gray-50 rounded-2xl p-4 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none transition-all border-0"
+              required
+              minLength={5}
+              maxLength={500}
+            />
+            <p className="text-right text-xs text-gray-300 -mt-1 pr-1">{newPostCaption.length}/500</p>
+          </div>
+
+          {/* Location */}
+          <div className="bg-gray-50 rounded-2xl p-4 flex flex-col gap-3">
+            <div className="flex items-center gap-3">
+              <MapPin size={16} className="text-indigo-500 shrink-0" />
+              <input
+                type="text"
+                placeholder="Add location (e.g. Trastevere, Rome)"
+                value={newPostLocation}
+                onChange={(e) => setNewPostLocation(e.target.value)}
+                className="flex-1 bg-transparent text-sm font-medium text-gray-800 placeholder-gray-400 focus:outline-none"
+                required
+                minLength={2}
+                maxLength={100}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowMapPicker(v => !v)}
+              className="flex items-center gap-1.5 text-xs font-semibold text-indigo-500 hover:text-indigo-700 transition-colors self-start"
+            >
+              <Map size={12} />
+              {showMapPicker ? 'Hide map' : 'Pin precise location (optional)'}
+            </button>
+            {showMapPicker && (
+              <div className="animate-in">
+                <LocationPicker onLocationSelect={(lat, lng) => setNewPostCoords({ lat, lng })} />
+                {newPostCoords && (
+                  <p className="text-xs text-green-600 font-semibold mt-2 flex items-center gap-1">
+                    <BadgeCheck size={12} /> {newPostCoords.lat.toFixed(4)}, {newPostCoords.lng.toFixed(4)}
+                  </p>
+                )}
               </div>
+            )}
+          </div>
 
-             <div>
-                 <label className="block text-sm font-bold text-gray-700 mb-1">Caption</label>
-                 <textarea 
-                     placeholder="Write a caption..." 
-                     rows={3}
-                     value={newPostCaption}
-                     onChange={(e) => setNewPostCaption(e.target.value)}
-                     className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-                     required
-                     minLength={5}
-                     maxLength={500}
-                 ></textarea>
-             </div>
-
-             <button 
-                 type="submit" 
-                 disabled={isUploading || !newPostImage || !newPostCaption || !newPostLocation}
-                 className="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 disabled:opacity-50 mt-2"
-             >
-                 {isUploading ? 'Uploading Post...' : 'Share Post'}
-             </button>
-         </form>
+          {/* Submit */}
+          <button
+            type="submit"
+            disabled={isUploading || !newPostImage || !newPostCaption || !newPostLocation}
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-2xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {isUploading ? (
+              <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Sharing...</>
+            ) : (
+              'Share Post'
+            )}
+          </button>
+        </form>
       </Modal>
 
     </div>

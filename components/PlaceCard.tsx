@@ -114,7 +114,7 @@ const PlaceCard: React.FC<PlaceCardProps> = ({ place, compact = false }) => {
         </div>
         
         <div className="absolute bottom-3 left-3 right-3">
-             <h3 className="font-serif font-bold text-white text-xl line-clamp-1 drop-shadow-md">{place.name}</h3>
+             <h3 className="font-bold text-white text-xl line-clamp-1 drop-shadow-md">{place.name}</h3>
             {place.tags && place.tags.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-1.5">
                 {place.tags.slice(0, 2).map(tag => (

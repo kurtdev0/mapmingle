@@ -90,52 +90,71 @@ const Planner: React.FC = () => {
 
   return (
     <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Page header */}
+      <div className="max-w-4xl mx-auto text-center mb-10">
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-50 text-indigo-700 text-sm font-bold mb-5 border border-indigo-100">
+          <Calendar size={15} /> AI-Powered Itineraries
+        </div>
+        <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-3">
+          Plan Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Perfect Trip</span>
+        </h1>
+        <p className="text-gray-500 text-lg max-w-xl mx-auto">
+          Get a curated day-by-day "Must See & Eat" plan with an interactive route map in seconds.
+        </p>
+      </div>
+
       <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden mb-10">
-          <div className="bg-indigo-600 px-8 py-8 text-center">
-            <h1 className="text-3xl font-bold text-white flex items-center justify-center gap-3">
-                <Calendar className="w-8 h-8" />
-                Trip Planner
-            </h1>
-            <p className="text-indigo-100 mt-2">Get a curated "Must See & Eat" plan in seconds.</p>
-          </div>
-          
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden mb-10">
           <div className="p-8">
             <form onSubmit={generateItinerary} className="space-y-6">
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Destination</label>
-                    <input 
-                        type="text" 
-                        required
-                        minLength={2}
-                        maxLength={100}
-                        className="w-full border-gray-300 border rounded-lg px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500"
-                        placeholder="e.g., Paris, Tokyo, New York"
-                        value={destination}
-                        onChange={(e) => setDestination(e.target.value)}
-                    />
+                    <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">Destination</label>
+                    <div className="relative">
+                      <MapPin size={18} className="absolute left-4 top-3.5 text-gray-400 pointer-events-none" />
+                      <input
+                          type="text"
+                          required
+                          minLength={2}
+                          maxLength={100}
+                          className="w-full bg-gray-50 border border-gray-200 rounded-2xl pl-11 pr-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all font-medium text-gray-900 placeholder-gray-400"
+                          placeholder="e.g., Paris, Tokyo, New York"
+                          value={destination}
+                          onChange={(e) => setDestination(e.target.value)}
+                      />
+                    </div>
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Duration: {days} Days</label>
-                    <input 
-                        type="range" 
-                        min="1" 
-                        max="7" 
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Duration</label>
+                      <span className="text-indigo-600 font-black text-lg">{days} {days === 1 ? 'Day' : 'Days'}</span>
+                    </div>
+                    <input
+                        type="range"
+                        min="1"
+                        max="7"
                         value={days}
                         onChange={(e) => setDays(Number(e.target.value))}
                         className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
                     />
-                    <div className="flex justify-between text-xs text-gray-400 mt-2">
-                        <span>1 Day</span>
-                        <span>7 Days</span>
+                    <div className="flex justify-between text-xs text-gray-400 mt-2 font-medium">
+                        {[1,2,3,4,5,6,7].map(d => (
+                          <span key={d} className={d === days ? 'text-indigo-600 font-bold' : ''}>{d}d</span>
+                        ))}
                     </div>
                 </div>
-                <button 
+                <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-gray-900 text-white font-bold py-4 rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50"
+                    className="w-full bg-gray-900 text-white font-bold py-4 rounded-2xl hover:bg-black transition-colors disabled:opacity-50 shadow-lg shadow-gray-900/10 flex items-center justify-center gap-2"
                 >
-                    {loading ? 'Generating Plan...' : 'Create Itinerary'}
+                    {loading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        Generating Your Plan...
+                      </>
+                    ) : (
+                      <><Calendar size={18} /> Create Itinerary</>
+                    )}
                 </button>
             </form>
           </div>

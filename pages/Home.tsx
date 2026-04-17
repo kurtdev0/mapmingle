@@ -96,7 +96,7 @@ const Home: React.FC = () => {
                     address: 'Sintra, Portugal',
                     rating: 4.8,
                     tags: ['Architecture', 'History'],
-                    photoUrl: 'https://images.unsplash.com/photo-1590059530432-849db9654d09?auto=format&fit=crop&q=80&w=800'
+                    photoUrl: '/sintra.png'
                 }
             ]);
         } finally {
@@ -106,51 +106,154 @@ const Home: React.FC = () => {
     loadInitial();
   }, []);
 
+  const heroCards = [
+    {
+      name: 'Oeschinen Lake',
+      location: 'Kandersteg, Switzerland',
+      tag: 'Nature',
+      rating: 4.9,
+      photo: 'https://images.unsplash.com/photo-1549880181-56a44cf4a9a5?auto=format&fit=crop&q=80&w=600',
+    },
+    {
+      name: 'Jiufen Old Street',
+      location: 'Ruifang District, Taiwan',
+      tag: 'Culture',
+      rating: 4.7,
+      photo: 'https://images.unsplash.com/photo-1493780474015-ba834fd0ce2f?auto=format&fit=crop&q=80&w=600',
+    },
+    {
+      name: 'Sintra Palaces',
+      location: 'Sintra, Portugal',
+      tag: 'Architecture',
+      rating: 4.8,
+      photo: '/sintra.png',
+    },
+  ];
+
   return (
     <div className="pb-20">
       {/* Hero Section */}
-      <div className="bg-white border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28 text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-50 text-indigo-700 text-sm font-bold mb-8 animate-fade-in-up border border-indigo-100">
-                <Sparkles size={16} /> #1 Community for authentic travel
-            </div>
-            <h1 className="text-5xl lg:text-7xl font-serif font-bold text-gray-900 tracking-tight mb-6 leading-tight">
-            Discover the <br className="hidden md:block"/> <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Undiscovered</span>
-            </h1>
-            <p className="text-xl text-gray-500 max-w-2xl mx-auto mb-10 leading-relaxed font-light">
-            Escape the tourist traps. Find the hidden gems, secret spots, and local favorites that guidebooks miss.
-            </p>
+      <div className="bg-white border-b border-gray-100 overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
 
-            <div className="max-w-2xl mx-auto relative z-10">
-                <form onSubmit={handleSearch} className="relative group">
-                    <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
-                        <MapPin className="h-6 w-6 text-gray-400 group-focus-within:text-indigo-600 transition-colors" />
-                    </div>
-                    <input
-                        type="text"
-                        className="block w-full pl-14 pr-16 py-5 border border-gray-200 rounded-3xl leading-5 bg-white placeholder-gray-400 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 text-lg shadow-xl shadow-gray-200/50 transition-all"
-                        placeholder="Where is your next adventure? (e.g. Kyoto)"
-                        value={city}
-                        onChange={(e) => setCity(e.target.value)}
-                        required
-                        minLength={2}
-                        maxLength={100}
-                    />
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="absolute inset-y-2 right-2 px-6 bg-gray-900 text-white rounded-2xl font-bold hover:bg-black disabled:opacity-50 transition-all shadow-lg"
-                    >
-                        {loading ? '...' : <Search size={22} />}
-                    </button>
-                </form>
+            {/* Left Column */}
+            <div>
+     
+              <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 tracking-tight mb-6 leading-tight">
+                Discover the{' '}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
+                  Undiscovered
+                </span>
+              </h1>
+              <p className="text-xl text-gray-500 mb-10 leading-relaxed font-light max-w-lg">
+                Escape the tourist traps. Find hidden gems, secret spots, and local favorites that guidebooks miss.
+              </p>
+
+              <form onSubmit={handleSearch} className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                  <MapPin className="h-6 w-6 text-gray-400 group-focus-within:text-indigo-600 transition-colors" />
+                </div>
+                <input
+                  type="text"
+                  className="block w-full pl-14 pr-16 py-5 border border-gray-200 rounded-3xl leading-5 bg-white placeholder-gray-400 focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 text-lg shadow-xl shadow-indigo-100/30 transition-all"
+                  placeholder="Where is your next adventure? (e.g. Kyoto)"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  required
+                  minLength={2}
+                  maxLength={100}
+                />
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="absolute inset-y-2 right-2 px-6 bg-gray-900 text-white rounded-2xl font-bold hover:bg-black disabled:opacity-50 transition-all shadow-lg"
+                >
+                  {loading ? '...' : <Search size={22} />}
+                </button>
+              </form>
+
+              <div className="flex items-center gap-8 mt-10">
+                <div>
+                  <div className="text-2xl font-bold text-gray-900">10,000+</div>
+                  <div className="text-sm text-gray-500">Hidden gems</div>
+                </div>
+                <div className="w-px h-10 bg-gray-200" />
+                <div>
+                  <div className="text-2xl font-bold text-gray-900">150+</div>
+                  <div className="text-sm text-gray-500">Countries</div>
+                </div>
+                <div className="w-px h-10 bg-gray-200" />
+                <div>
+                  <div className="text-2xl font-bold text-gray-900">4.9★</div>
+                  <div className="text-sm text-gray-500">Avg. rating</div>
+                </div>
+              </div>
             </div>
+
+            {/* Right Column — scattered card stack */}
+            <div className="hidden lg:block relative h-[480px]">
+              {/* Card 1 — top-left, tilted left */}
+              <div className="absolute top-4 left-6 w-52 rounded-2xl overflow-hidden shadow-2xl rotate-[-4deg] z-10 bg-white border border-gray-100">
+                <img src={heroCards[0].photo} alt={heroCards[0].name} className="w-full h-36 object-cover" />
+                <div className="p-3">
+                  <div className="font-bold text-sm text-gray-900 truncate">{heroCards[0].name}</div>
+                  <div className="flex items-center gap-1 mt-1">
+                    <MapPin size={11} className="text-indigo-500 flex-shrink-0" />
+                    <span className="text-xs text-gray-500 truncate">{heroCards[0].location}</span>
+                  </div>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-[10px] px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full font-semibold">{heroCards[0].tag}</span>
+                    <span className="text-xs font-bold text-gray-800">★ {heroCards[0].rating}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2 — top-right, tilted right */}
+              <div className="absolute top-0 right-2 w-52 rounded-2xl overflow-hidden shadow-xl rotate-[3deg] z-20 bg-white border border-gray-100">
+                <img src={heroCards[1].photo} alt={heroCards[1].name} className="w-full h-36 object-cover" />
+                <div className="p-3">
+                  <div className="font-bold text-sm text-gray-900 truncate">{heroCards[1].name}</div>
+                  <div className="flex items-center gap-1 mt-1">
+                    <MapPin size={11} className="text-indigo-500 flex-shrink-0" />
+                    <span className="text-xs text-gray-500 truncate">{heroCards[1].location}</span>
+                  </div>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-[10px] px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full font-semibold">{heroCards[1].tag}</span>
+                    <span className="text-xs font-bold text-gray-800">★ {heroCards[1].rating}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 3 — bottom-center, nearly straight, front */}
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-60 rounded-2xl overflow-hidden shadow-2xl rotate-[-1deg] z-30 bg-white border border-gray-100">
+                <img src={heroCards[2].photo} alt={heroCards[2].name} className="w-full h-40 object-cover" />
+                <div className="p-4">
+                  <div className="font-bold text-sm text-gray-900 truncate">{heroCards[2].name}</div>
+                  <div className="flex items-center gap-1 mt-1">
+                    <MapPin size={11} className="text-indigo-500 flex-shrink-0" />
+                    <span className="text-xs text-gray-500 truncate">{heroCards[2].location}</span>
+                  </div>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-[10px] px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full font-semibold">{heroCards[2].tag}</span>
+                    <span className="text-xs font-bold text-gray-800">★ {heroCards[2].rating}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Decorative background ring */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="w-80 h-80 rounded-full border border-indigo-100/60 bg-indigo-50/30" />
+              </div>
+            </div>
+
+          </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="flex items-center justify-between mb-8">
-            <h2 className="text-3xl font-serif font-bold text-gray-900">
+            <h2 className="text-3xl font-bold text-gray-900">
                 {hasSearched ? `Results for "${city}"` : 'Trending Hidden Gems'}
             </h2>
             {!hasSearched && <Link to="/feed" className="text-indigo-600 font-bold hover:underline">View All</Link>}

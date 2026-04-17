@@ -86,7 +86,7 @@ const Guides: React.FC = () => {
       {/* Header Area */}
       <div className="flex flex-col md:flex-row justify-between items-end md:items-center mb-10 gap-6">
         <div>
-           <h1 className="text-4xl font-serif font-bold text-gray-900 mb-2">Local Guides</h1>
+           <h1 className="text-4xl font-bold text-gray-900 mb-2">Local Guides</h1>
            <p className="text-gray-500">Connect with validated local experts for authentic experiences.</p>
         </div>
         <div className="flex gap-3 w-full md:w-auto">
@@ -115,7 +115,32 @@ const Guides: React.FC = () => {
 
       {/* Grid */}
       {loading ? (
-          <div className="text-center py-20 text-gray-500">Loading Guides...</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={i} className="bg-white rounded-3xl border border-gray-100 p-6">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-16 h-16 rounded-full bg-gray-100 animate-pulse shrink-0"></div>
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-gray-100 rounded-full w-28 animate-pulse"></div>
+                    <div className="h-3 bg-gray-100 rounded-full w-20 animate-pulse"></div>
+                  </div>
+                </div>
+                <div className="space-y-2 mb-4">
+                  <div className="h-3 bg-gray-100 rounded-full w-full animate-pulse"></div>
+                  <div className="h-3 bg-gray-100 rounded-full w-4/5 animate-pulse"></div>
+                </div>
+                <div className="flex gap-2 mb-5">
+                  {[1, 2, 3].map(j => (
+                    <div key={j} className="h-6 w-16 bg-gray-100 rounded-lg animate-pulse"></div>
+                  ))}
+                </div>
+                <div className="flex gap-3">
+                  <div className="flex-1 h-10 bg-gray-100 rounded-xl animate-pulse"></div>
+                  <div className="w-10 h-10 bg-gray-100 rounded-xl animate-pulse"></div>
+                </div>
+              </div>
+            ))}
+          </div>
       ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filteredGuides.map((guide) => (
